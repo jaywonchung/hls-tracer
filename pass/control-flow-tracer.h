@@ -10,6 +10,7 @@ class ControlFlowTracer {
   ControlFlowTracer() = default;
   void incrementControlFlowCount(const llvm::DILocation *location);
   int getControlFlowCount(const llvm::DILocation *location) const;
+  void dump() const;
 
  private:
   std::map<const llvm::DILocation *, unsigned int> counts_;
