@@ -1,0 +1,7 @@
+clang++
+-I/usr/local/Cellar/llvm/12.0.1/include
+-std=c++14
+-stdlib=libc++
+-D__STDC_CONSTANT_MACROS
+-D__STDC_FORMAT_MACROS
+-D__STDC_LIMIT_MACROS
