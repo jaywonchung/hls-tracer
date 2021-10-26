@@ -2,6 +2,7 @@
 #include <vector>
 #include <map>
 #include <algorithm>
+#include <cassert>
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
@@ -54,10 +55,11 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
       for (auto bi = bb.begin(), bend = bb.end(); bi != bend; bi++) {
         if (isa<BranchInst>(bi) == false) continue;
         auto increaseCountTracerFunc = getTracerFunction(TracerFunction::IncrementCount);
+        assert(increaseCountTracerFunc && "Not found tracer function!");
         std::vector<Value*> args;
         // TODO: Put arguments.
         Instruction* newInst = CallInst::Create(increaseCountTracerFunc, args);
-        bi->insertBefore(newInst);
+        bb.getInstList().insert(bi, newInst);
         changed = true;
       }
     }
@@ -85,6 +87,7 @@ Function* ControlFlowTracePass::getTracerFunction(const TracerFunction tracerFun
   else if (tracerFunc == TracerFunction::Dump) key = "Dump";
   else return nullptr;
   
+  // This checks whether the given key value is contained in the map element's key.
   auto it = std::find_if(tracerFunctions.begin(), tracerFunctions.end(),
               [&key](const std::pair<std::string, Function*>& element) -> bool {
                 return element.first.find(key) != std::string::npos;
