@@ -22,12 +22,20 @@ int ControlFlowTracer::getControlFlowCount(
   return result->second;
 }
 
+/**
+ * Insu: Code commented due to version incompatibility issue.
+ * I am testing with regular LLVM 10 before using Vitis clang,
+ * which no longer has llvm::fs::OpenFlags::F_RW.
+ */
 void ControlFlowTracer::dump() const {
-  std::error_code ec;
-  llvm::raw_fd_ostream os(llvm::StringRef("trace.result"), ec,
-                          llvm::sys::fs::OpenFlags::F_RW);
+  // std::error_code ec;
+  // llvm::raw_fd_ostream os(llvm::StringRef("trace.result"), ec,
+  //                         llvm::sys::fs::OpenFlags::F_RW);
 
-  for (auto count : counts_) {
-    count.first->print(os);
-  }
+  // for (auto count : counts_) {
+  //   count.first->print(os);
+  // }
+
+  // os.flush();
+  // os.close();
 }

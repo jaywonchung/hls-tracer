@@ -1,19 +1,21 @@
 #ifndef __CONTROL_FLOW_TRACER_H__
 #define __CONTROL_FLOW_TRACER_H__
 
-#include "llvm/IR/DebugInfoMetadata.h"
 #include <map>
-#include <cerrno>
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Module.h"
 
 class ControlFlowTracer {
  public:
-  ControlFlowTracer() = default;
-  void incrementControlFlowCount(const llvm::DILocation *location);
-  int getControlFlowCount(const llvm::DILocation *location) const;
+  ControlFlowTracer(llvm::Module& module) : module_(module){};
+  void incrementControlFlowCount(const llvm::DILocation* location);
+  int getControlFlowCount(const llvm::DILocation* location) const;
+
   void dump() const;
 
  private:
-  std::map<const llvm::DILocation *, unsigned int> counts_;
+  llvm::Module& module_;
+  std::map<const llvm::DILocation*, unsigned int> counts_;
 };
 
 #endif
