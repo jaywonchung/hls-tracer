@@ -6,6 +6,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/IR/Mangler.h"
 
 using namespace llvm;
 
@@ -25,7 +26,7 @@ struct ControlFlowTracePass : public FunctionPass {
   virtual bool runOnFunction(Function& func) override;
 
  private:
-  Function* getFunctionIR(const TracerFunction func);
+  Function* getFunctionIR(const TracerFunction funcType);
 
  private:
   Module* module_;
@@ -50,13 +51,14 @@ bool ControlFlowTracePass::runOnFunction(Function& func) {
   return false;
 }
 
-Function* ControlFlowTracePass::getFunctionIR(const TracerFunction func) {
+Function* ControlFlowTracePass::getFunctionIR(const TracerFunction funcType) {
   FunctionType* retType = nullptr;
   std::vector<Type*> argTypes;
   Function* func = nullptr;
 
-  switch (func) {
+  switch (funcType) {
     case TracerFunction::IncrementCount: {
+      
       break;
     }
     case TracerFunction::GetCount:
