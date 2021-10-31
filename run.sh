@@ -44,7 +44,7 @@ export CPATH=$XILINX_HLS/tps/lnx64/binutils-2.26/include:$XILINX_HLS/tps/lnx64/g
 export MANPATH=$XILINX_HLS/tps/lnx64/binutils-2.26/share/man:$XILINX_HLS/tps/lnx64/gcc-6.2.0/share/man$MANPATH
 
 clang_path=$XILINX_HLS/lnx64/tools/clang-3.9-csynth
-echo "Using Vitis HLS clang/opt: $clang_path/bin"
+echo "Using Vitis HLS clang/opt: $clang_path/bin" >&2
 
 [ -n "$PATH" ] && PATH=:$PATH
 export PATH=$clang_path/bin$PATH
