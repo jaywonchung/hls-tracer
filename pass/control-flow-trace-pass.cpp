@@ -46,7 +46,7 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
 
   // Insu: Here get a global variable pointer (pointerToTracer),
   // targeting named controlFlowTracer (defined in control-flow-trace-pass.cpp)
-  // (Hopefully).
+  // pointerToTracer refers: ControlFlowTracer * (value: &controlFlowTracer);
   GlobalVariable* controlFlowTracer =
       module.getNamedGlobal("controlFlowTracer");
   assert(controlFlowTracer != nullptr &&
@@ -75,12 +75,12 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
             getTracerFunction(TracerFunction::IncrementCount);
         assert(increaseCountTracerFunc && "Not found tracer function!");
 
+        // It creates a llvm::Value of i8*, which is equivalent to char * in IR.
+        // As tracer call receives char * for a string, it should be ok.
         auto filename = builder.CreateGlobalStringPtr(loc->getFilename(),
                                                       loc->getFilename());
-        Value* pointerToFilename = builder.CreatePointerCast(
-            filename, increaseCountTracerFunc->getArg(1)->getType());
 
-        ArrayRef<Value*> args = {pointerToTracer, pointerToFilename,
+        ArrayRef<Value*> args = {pointerToTracer, filename,
                                  builder.getInt32(loc->getLine()),
                                  builder.getInt32(loc->getColumn())};
 

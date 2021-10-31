@@ -1,21 +1,22 @@
 #include <map>
 #include <sstream>
 #include <string>
+#include <iostream>
 
 class ControlFlowTracer {
  public:
   ControlFlowTracer() = default;
-  void incrementControlFlowCount(const std::string& filename,
+  void incrementControlFlowCount(const char* filename,
                                  const unsigned int line,
                                  const unsigned int column);
-  int getControlFlowCount(const std::string& filename,
+  int getControlFlowCount(const char* filename,
                           const unsigned int line,
                           const unsigned int column) const;
 
   void dump() const;
 
  private:
-  std::string constructLocationInfo(const std::string& filename,
+  std::string constructLocationInfo(const char* filename,
                                     const unsigned int line,
                                     const unsigned int column) const;
 
@@ -27,7 +28,7 @@ class ControlFlowTracer {
 ControlFlowTracer controlFlowTracer;
 
 std::string ControlFlowTracer::constructLocationInfo(
-    const std::string& filename,
+    const char* filename,
     const unsigned int line,
     const unsigned int column) const {
   std::stringstream ss;
@@ -35,9 +36,12 @@ std::string ControlFlowTracer::constructLocationInfo(
   return ss.str();
 }
 
-void ControlFlowTracer::incrementControlFlowCount(const std::string& filename,
+void ControlFlowTracer::incrementControlFlowCount(const char* filename,
                                                   const unsigned int line,
                                                   const unsigned int column) {
+  // For debugging
+  std::cout << "Entered incrementControlFlowCount" << std::endl;
+  
   // Try to insert the given location with count 1.
   auto result =
       counts_.insert({constructLocationInfo(filename, line, column), 1});
@@ -48,7 +52,7 @@ void ControlFlowTracer::incrementControlFlowCount(const std::string& filename,
   }
 }
 
-int ControlFlowTracer::getControlFlowCount(const std::string& filename,
+int ControlFlowTracer::getControlFlowCount(const char* filename,
                                            const unsigned int line,
                                            const unsigned int column) const {
   auto result = counts_.find(constructLocationInfo(filename, line, column));
