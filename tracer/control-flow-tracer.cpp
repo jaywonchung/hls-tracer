@@ -1,26 +1,46 @@
 #include <map>
-#include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/Module.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/raw_ostream.h"
+#include <sstream>
+#include <string>
 
 class ControlFlowTracer {
  public:
-  ControlFlowTracer(llvm::Module& module) : module_(module){};
-  void incrementControlFlowCount(const llvm::DILocation* location);
-  int getControlFlowCount(const llvm::DILocation* location) const;
+  ControlFlowTracer() = default;
+  void incrementControlFlowCount(const std::string& filename,
+                                 const unsigned int line,
+                                 const unsigned int column);
+  int getControlFlowCount(const std::string& filename,
+                          const unsigned int line,
+                          const unsigned int column) const;
 
   void dump() const;
 
  private:
-  llvm::Module& module_;
-  std::map<const llvm::DILocation*, unsigned int> counts_;
+  std::string constructLocationInfo(const std::string& filename,
+                                    const unsigned int line,
+                                    const unsigned int column) const;
+
+ private:
+  std::map<std::string, unsigned int> counts_;
 };
 
-void ControlFlowTracer::incrementControlFlowCount(
-    const llvm::DILocation* location) {
+// Global variable that our pass will reference.
+ControlFlowTracer controlFlowTracer;
+
+std::string ControlFlowTracer::constructLocationInfo(
+    const std::string& filename,
+    const unsigned int line,
+    const unsigned int column) const {
+  std::stringstream ss;
+  ss << filename << ":" << line << ":" << column;
+  return ss.str();
+}
+
+void ControlFlowTracer::incrementControlFlowCount(const std::string& filename,
+                                                  const unsigned int line,
+                                                  const unsigned int column) {
   // Try to insert the given location with count 1.
-  auto result = counts_.insert({location, 1});
+  auto result =
+      counts_.insert({constructLocationInfo(filename, line, column), 1});
   // If result.second == false, it means there already is an entry for the
   // location. Increment the count.
   if (result.second == false) {
@@ -28,9 +48,10 @@ void ControlFlowTracer::incrementControlFlowCount(
   }
 }
 
-int ControlFlowTracer::getControlFlowCount(
-    const llvm::DILocation* location) const {
-  auto result = counts_.find(location);
+int ControlFlowTracer::getControlFlowCount(const std::string& filename,
+                                           const unsigned int line,
+                                           const unsigned int column) const {
+  auto result = counts_.find(constructLocationInfo(filename, line, column));
   if (result == counts_.end()) {
     return -ENOENT;
   }

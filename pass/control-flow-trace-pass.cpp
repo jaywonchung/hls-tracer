@@ -1,14 +1,16 @@
-#include <string>
-#include <vector>
-#include <map>
 #include <algorithm>
 #include <cassert>
+#include <map>
+#include <string>
+#include <vector>
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/IR/Instructions.h"
 
 using namespace llvm;
 
@@ -40,58 +42,88 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
   errs() << "Entered module " << module.getName() << ".\n";
   getTracerFunctions(module.getFunctionList());
 
-  // TODO: Find branch instructions (for control flow analysis)
-  // and add tracer functions with the corresponding llvm::DILocation *
-  // that can be achieved via llvm::Instruction::getDebugLoc()
+  IRBuilder<> builder(module.getContext());
 
-  // TODO1: Insert a creation call of global ControlFlowTracer.
+  // Insu: Here get a global variable pointer (pointerToTracer),
+  // targeting named controlFlowTracer (defined in control-flow-trace-pass.cpp)
+  // (Hopefully).
+  GlobalVariable* controlFlowTracer =
+      module.getNamedGlobal("controlFlowTracer");
+  assert(controlFlowTracer != nullptr &&
+         "Cannot find a global ControlFlowTracer variable.");
+  Value* pointerToTracer = builder.CreatePointerCast(
+      controlFlowTracer, controlFlowTracer->getType());
 
+  // Insu: Use llvm::IRBuilder to create a call and insert it.
+  // TODO: Need to adjust insertion points.
+  for (auto& func : module.getFunctionList()) {
+    if (func.getName().contains("sigma_n") == false)
+      continue;
 
-  // TODO2: Using this value, call member function in our target code.
-  for (auto& func: module.getFunctionList()) {
-    if (func.getName().contains("sigma_n") == false) continue;
-    
-    for (auto &bb: func) {
+    for (auto& bb : func) {
       for (auto bi = bb.begin(), bend = bb.end(); bi != bend; bi++) {
-        if (isa<BranchInst>(bi) == false) continue;
-        auto increaseCountTracerFunc = getTracerFunction(TracerFunction::IncrementCount);
+        if (isa<BranchInst>(bi) == false)
+          continue;
+        DILocation* loc = bi->getDebugLoc().get();
+
+        // New instructions will be added here.
+        // Without this code a segfault occurs, saying
+        // "Error reading file: No such file or directory".
+        builder.SetInsertPoint(&*bi);
+
+        auto increaseCountTracerFunc =
+            getTracerFunction(TracerFunction::IncrementCount);
         assert(increaseCountTracerFunc && "Not found tracer function!");
-        std::vector<Value*> args;
-        // TODO: Put arguments.
-        Instruction* newInst = CallInst::Create(increaseCountTracerFunc, args);
-        bb.getInstList().insert(bi, newInst);
+
+        auto filename = builder.CreateGlobalStringPtr(loc->getFilename(),
+                                                      loc->getFilename());
+        Value* pointerToFilename = builder.CreatePointerCast(
+            filename, increaseCountTracerFunc->getArg(1)->getType());
+
+        ArrayRef<Value*> args = {pointerToTracer, pointerToFilename,
+                                 builder.getInt32(loc->getLine()),
+                                 builder.getInt32(loc->getColumn())};
+
+        builder.CreateCall(increaseCountTracerFunc, args);
         changed = true;
       }
     }
-
-    break;
   }
 
-  return changed;
+  return false;
 }
 
-int ControlFlowTracePass::getTracerFunctions(Module::FunctionListType& functions) {
+int ControlFlowTracePass::getTracerFunctions(
+    Module::FunctionListType& functions) {
   int function_num = 0;
-  for (auto& func: functions) {
-    if (func.getName().contains("ControlFlowTracer") == false) continue;
+  for (auto& func : functions) {
+    if (func.getName().contains("ControlFlowTracer") == false)
+      continue;
     tracerFunctions.insert({func.getName(), &func});
   }
   return function_num;
 }
 
-Function* ControlFlowTracePass::getTracerFunction(const TracerFunction tracerFunc) {
+Function* ControlFlowTracePass::getTracerFunction(
+    const TracerFunction tracerFunc) {
   Function* func = nullptr;
   std::string key;
-  if (tracerFunc == TracerFunction::IncrementCount) key = "incrementControlFlowCount";
-  else if (tracerFunc == TracerFunction::GetCount) key = "getCount";
-  else if (tracerFunc == TracerFunction::Dump) key = "Dump";
-  else return nullptr;
-  
-  // This checks whether the given key value is contained in the map element's key.
-  auto it = std::find_if(tracerFunctions.begin(), tracerFunctions.end(),
-              [&key](const std::pair<std::string, Function*>& element) -> bool {
-                return element.first.find(key) != std::string::npos;
-              });
+  if (tracerFunc == TracerFunction::IncrementCount)
+    key = "incrementControlFlowCount";
+  else if (tracerFunc == TracerFunction::GetCount)
+    key = "getCount";
+  else if (tracerFunc == TracerFunction::Dump)
+    key = "Dump";
+  else
+    return nullptr;
+
+  // This checks whether the given key value is contained in the map element's
+  // key.
+  auto it = std::find_if(
+      tracerFunctions.begin(), tracerFunctions.end(),
+      [&key](const std::pair<std::string, Function*>& element) -> bool {
+        return element.first.find(key) != std::string::npos;
+      });
   if (it != tracerFunctions.end()) {
     func = it->second;
   }
