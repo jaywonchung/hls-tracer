@@ -62,4 +62,4 @@ if [ $# -ne 1 ]; then
   echo "Usage: $0 <any.ll>"
   exit 1
 fi
-opt -load pass/control-flow-trace-pass.so -controlflowtrace $1
+opt -S -load pass/control-flow-trace-pass.so -controlflowtrace $1

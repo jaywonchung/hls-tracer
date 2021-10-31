@@ -1,7 +1,7 @@
 all: control-flow-tracer.ll
 
 control-flow-tracer.ll: control-flow-tracer.cpp
-	$(CXX) -S -emit-llvm $^
+	$(CXX) -g -S -emit-llvm $^
 
 clean:
 	rm -f *.ll

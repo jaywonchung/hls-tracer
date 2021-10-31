@@ -10,8 +10,7 @@ all:
 	for dir in $(SUBDIRS); do \
 		CXX="$(CXX)" CXXFLAGS="$(CXXFLAGS)" LDFLAGS="$(LDFLAGS)" make -C $$dir; \
 	done
-	llvm-link tracer/*.ll testfunctions/*.ll -o out.ll
-	llvm-dis -o out.ll out.ll
+	llvm-link -S tracer/*.ll testfunctions/*.ll -o out.ll
 
 clean:
 	rm -f *.ll
