@@ -5,77 +5,30 @@
 
 class ControlFlowTracer {
  public:
-  ControlFlowTracer() = default;
-  void incrementControlFlowCount(const char* filename,
-                                 const unsigned int line,
-                                 const unsigned int column);
-  int getControlFlowCount(const char* filename,
-                          const unsigned int line,
-                          const unsigned int column) const;
-
-  void dump() const;
+  ControlFlowTracer(): current_index_(0), buffer_size_(0), array_(nullptr) {};
+  
+  void init(int *array, int size);
+  void record(int row, int column);
 
  private:
-  std::string constructLocationInfo(const char* filename,
-                                    const unsigned int line,
-                                    const unsigned int column) const;
-
- private:
-  std::map<std::string, unsigned int> counts_;
+  int current_index_;
+  int buffer_size_;
+  int *array_;
 };
+
+/* Should not be defined in class definition, otherwise inlined and cannot found in IR */
+void ControlFlowTracer::init(int *array, int size) {
+  std::cout << "Entered ControlFlowTracer init function" << std::endl;
+  buffer_size_ = size;
+  array_ = array;
+}
+
+void ControlFlowTracer::record(int row, int column) {
+  std::cout << "Entered ControlFlowTracer record function" << std::endl;
+  array_[current_index_] = row;
+  array_[current_index_ + 1] = column;
+  current_index_ = (current_index_ + 2 ) % (buffer_size_ / sizeof(int));
+}
 
 // Global variable that our pass will reference.
 ControlFlowTracer controlFlowTracer;
-
-std::string ControlFlowTracer::constructLocationInfo(
-    const char* filename,
-    const unsigned int line,
-    const unsigned int column) const {
-  std::stringstream ss;
-  ss << filename << ":" << line << ":" << column;
-  return ss.str();
-}
-
-void ControlFlowTracer::incrementControlFlowCount(const char* filename,
-                                                  const unsigned int line,
-                                                  const unsigned int column) {
-  // For debugging
-  std::cout << "Entered incrementControlFlowCount" << std::endl;
-  
-  // Try to insert the given location with count 1.
-  auto result =
-      counts_.insert({constructLocationInfo(filename, line, column), 1});
-  // If result.second == false, it means there already is an entry for the
-  // location. Increment the count.
-  if (result.second == false) {
-    result.first->second++;
-  }
-}
-
-int ControlFlowTracer::getControlFlowCount(const char* filename,
-                                           const unsigned int line,
-                                           const unsigned int column) const {
-  auto result = counts_.find(constructLocationInfo(filename, line, column));
-  if (result == counts_.end()) {
-    return -ENOENT;
-  }
-  return result->second;
-}
-
-/**
- * Insu: Code commented due to version incompatibility issue.
- * I am testing with regular LLVM 10 before using Vitis clang,
- * which no longer has llvm::fs::OpenFlags::F_RW.
- */
-void ControlFlowTracer::dump() const {
-  // std::error_code ec;
-  // llvm::raw_fd_ostream os(llvm::StringRef("trace.result"), ec,
-  //                         llvm::sys::fs::OpenFlags::F_RW);
-
-  // for (auto count : counts_) {
-  //   count.first->print(os);
-  // }
-
-  // os.flush();
-  // os.close();
-}

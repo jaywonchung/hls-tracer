@@ -17,9 +17,8 @@ using namespace llvm;
 namespace {
 
 enum class TracerFunction : int {
-  IncrementCount,
-  GetCount,
-  Dump,
+  Init,
+  Record,
 };
 
 struct ControlFlowTracePass : public ModulePass {
@@ -36,6 +35,9 @@ struct ControlFlowTracePass : public ModulePass {
 };
 
 ControlFlowTracePass::ControlFlowTracePass() : ModulePass(ID) {}
+
+#define ITEM_WIDTH 8
+#define MAX_ITEM_NUM 128
 
 bool ControlFlowTracePass::runOnModule(Module& module) {
   bool changed = false;
@@ -54,37 +56,43 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
   Value* pointerToTracer = builder.CreatePointerCast(
       controlFlowTracer, controlFlowTracer->getType());
 
+
   // Insu: Use llvm::IRBuilder to create a call and insert it.
   // TODO: Need to adjust insertion points.
   for (auto& func : module.getFunctionList()) {
     if (func.getName().contains("sigma_n") == false)
       continue;
 
+    // Inject init function
+    auto initTracerFunc = getTracerFunction(TracerFunction::Init);
+    assert(initTracerFunc && "Cannot find a record tracer function!");
+    auto fi = func.getBasicBlockList().begin()->begin();
+    builder.SetInsertPoint(&*fi);
+
+    ArrayRef<Value*> args = {pointerToTracer, func.getArg(1), builder.getInt32(ITEM_WIDTH * MAX_ITEM_NUM)};
+    builder.CreateCall(initTracerFunc, args);
+    changed = true;
+
     for (auto& bb : func) {
       for (auto bi = bb.begin(), bend = bb.end(); bi != bend; bi++) {
         if (isa<BranchInst>(bi) == false)
           continue;
         DILocation* loc = bi->getDebugLoc().get();
+        assert(loc && "Cannot find debug location");
 
         // New instructions will be added here.
         // Without this code a segfault occurs, saying
         // "Error reading file: No such file or directory".
         builder.SetInsertPoint(&*bi);
 
-        auto increaseCountTracerFunc =
-            getTracerFunction(TracerFunction::IncrementCount);
-        assert(increaseCountTracerFunc && "Not found tracer function!");
+        auto recordTracerFunc =
+            getTracerFunction(TracerFunction::Record);
+        assert(recordTracerFunc && "Cannot find a record tracer function!");
 
-        // It creates a llvm::Value of i8*, which is equivalent to char * in IR.
-        // As tracer call receives char * for a string, it should be ok.
-        auto filename = builder.CreateGlobalStringPtr(loc->getFilename(),
-                                                      loc->getFilename());
-
-        ArrayRef<Value*> args = {pointerToTracer, filename,
-                                 builder.getInt32(loc->getLine()),
+        ArrayRef<Value*> args = {pointerToTracer, builder.getInt32(loc->getLine()),
                                  builder.getInt32(loc->getColumn())};
 
-        builder.CreateCall(increaseCountTracerFunc, args);
+        builder.CreateCall(recordTracerFunc, args);
         changed = true;
       }
     }
@@ -100,6 +108,7 @@ int ControlFlowTracePass::getTracerFunctions(
     if (func.getName().contains("ControlFlowTracer") == false)
       continue;
     tracerFunctions.insert({func.getName(), &func});
+    errs() << "Function: " << func.getName() << " added into tracer functions\n";
   }
   return function_num;
 }
@@ -108,12 +117,10 @@ Function* ControlFlowTracePass::getTracerFunction(
     const TracerFunction tracerFunc) {
   Function* func = nullptr;
   std::string key;
-  if (tracerFunc == TracerFunction::IncrementCount)
-    key = "incrementControlFlowCount";
-  else if (tracerFunc == TracerFunction::GetCount)
-    key = "getCount";
-  else if (tracerFunc == TracerFunction::Dump)
-    key = "Dump";
+  if (tracerFunc == TracerFunction::Init)
+    key = "init";
+  else if (tracerFunc == TracerFunction::Record)
+    key = "record";
   else
     return nullptr;
 
@@ -124,6 +131,7 @@ Function* ControlFlowTracePass::getTracerFunction(
       [&key](const std::pair<std::string, Function*>& element) -> bool {
         return element.first.find(key) != std::string::npos;
       });
+
   if (it != tracerFunctions.end()) {
     func = it->second;
   }
