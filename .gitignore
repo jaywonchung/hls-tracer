@@ -3,3 +3,6 @@
 **/*.ll
 
 .ccls-cache
+
+proj/
+vitis_hls.log

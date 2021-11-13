@@ -1,7 +1,3 @@
 clang++
--I/usr/local/Cellar/llvm/12.0.1/include
+-I/mnt/storage/jcma/Xilinx/Vitis_HLS/2020.2/lnx64/tools/clang-3.9-csynth/include
 -std=c++14
--stdlib=libc++
--D__STDC_CONSTANT_MACROS
--D__STDC_FORMAT_MACROS
--D__STDC_LIMIT_MACROS
