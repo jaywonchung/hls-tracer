@@ -8,9 +8,12 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IRReader/IRReader.h"
+#include "llvm/Linker/Linker.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/SourceMgr.h"
 
 using namespace llvm;
 
@@ -40,6 +43,24 @@ ControlFlowTracePass::ControlFlowTracePass() : ModulePass(ID) {}
 #define MAX_ITEM_NUM 128
 
 bool ControlFlowTracePass::runOnModule(Module& module) {
+  Linker L(module);
+
+  unsigned Flags = Linker::Flags::None;
+  unsigned ApplicableFlags = Flags & Linker::Flags::OverrideFromSrc;
+
+  SMDiagnostic Err;
+  std::unique_ptr<Module> Tracer = parseIRFile("/home/kdoyoon/hls-tracer/tracer/control-flow-tracer.bc", Err, module.getContext());
+  if (!Tracer) {
+    errs() << "error loading tracer.\n";
+    return false;
+  }
+
+  bool err = L.linkInModule(std::move(Tracer), ApplicableFlags);
+  // bool err = L.linkModules(module, std::move(Tracer), ApplicableFlags);
+	if (err) {
+    errs() << "Error linking tracer.\n";
+  }
+
   bool changed = false;
   errs() << "Entered module " << module.getName() << ".\n";
   getTracerFunctions(module.getFunctionList());
