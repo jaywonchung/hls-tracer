@@ -7,4 +7,4 @@ control-flow-tracer.bc: control-flow-tracer.cpp
 	$(CXX) -c -emit-llvm $^ -o $@
 
 clean:
-	rm -f *.ll
+	rm -f *.ll *.bc
