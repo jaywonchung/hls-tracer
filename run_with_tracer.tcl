@@ -1,11 +1,14 @@
 # Check whether the tracer instrumnetation pass is built
 set ::HLS_LLVM_PLUGIN_DIR pass
+set ::HLS_LLVM_TRACER_DIR tracer
 if { ![file exists $::HLS_LLVM_PLUGIN_DIR/control-flow-trace-pass.so] } {
   error "Must build control-flow-trace-pass.so before running this script"
 }
 
 # Include our tracer pass to the Vitis workflow
-set ::LLVM_CUSTOM_CMD {$LLVM_CUSTOM_OPT -load $::HLS_LLVM_PLUGIN_DIR/control-flow-trace-pass.so -controlflowtrace $LLVM_CUSTOM_INPUT -o $LLVM_CUSTOM_OUTPUT}
+# Do Yoon: inject llvm-link call in LLVM custom command to inject our tracer modules into the given code.
+set ::LLVM_CUSTOM_CMD {[exec llvm-link -suppress-warnings $LLVM_CUSTOM_INPUT $::HLS_LLVM_TRACER_DIR/control-flow-tracer.bc -o $LLVM_CUSTOM_INPUT]}
+append ::LLVM_CUSTOM_CMD “, ” {[exec $LLVM_CUSTOM_OPT -load $::HLS_LLVM_PLUGIN_DIR/control-flow-trace-pass.so -controlflowtrace $LLVM_CUSTOM_INPUT -o $LLVM_CUSTOM_OUTPUT]}
 
 # Open a project and remove any existing data
 open_project -reset proj

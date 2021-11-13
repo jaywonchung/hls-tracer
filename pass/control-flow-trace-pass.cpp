@@ -9,11 +9,10 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IRReader/IRReader.h"
-#include "llvm/Linker/Linker.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -43,24 +42,6 @@ ControlFlowTracePass::ControlFlowTracePass() : ModulePass(ID) {}
 #define MAX_ITEM_NUM 128
 
 bool ControlFlowTracePass::runOnModule(Module& module) {
-  Linker L(module);
-
-  unsigned Flags = Linker::Flags::None;
-  unsigned ApplicableFlags = Flags & Linker::Flags::OverrideFromSrc;
-
-  SMDiagnostic Err;
-  std::unique_ptr<Module> Tracer = parseIRFile("/home/kdoyoon/hls-tracer/tracer/control-flow-tracer.bc", Err, module.getContext());
-  if (!Tracer) {
-    errs() << "error loading tracer.\n";
-    return false;
-  }
-
-  bool err = L.linkInModule(std::move(Tracer), ApplicableFlags);
-  // bool err = L.linkModules(module, std::move(Tracer), ApplicableFlags);
-	if (err) {
-    errs() << "Error linking tracer.\n";
-  }
-
   bool changed = false;
   errs() << "Entered module " << module.getName() << ".\n";
   getTracerFunctions(module.getFunctionList());
@@ -77,7 +58,6 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
   Value* pointerToTracer = builder.CreatePointerCast(
       controlFlowTracer, controlFlowTracer->getType());
 
-
   // Insu: Use llvm::IRBuilder to create a call and insert it.
   // TODO: Need to adjust insertion points.
   for (auto& func : module.getFunctionList()) {
@@ -90,7 +70,8 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
     auto fi = func.getBasicBlockList().begin()->begin();
     builder.SetInsertPoint(&*fi);
 
-    ArrayRef<Value*> args = {pointerToTracer, func.getArg(1), builder.getInt32(ITEM_WIDTH * MAX_ITEM_NUM)};
+    ArrayRef<Value*> args = {pointerToTracer, func.getArg(1),
+                             builder.getInt32(ITEM_WIDTH * MAX_ITEM_NUM)};
     builder.CreateCall(initTracerFunc, args);
     changed = true;
 
@@ -106,11 +87,11 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
         // "Error reading file: No such file or directory".
         builder.SetInsertPoint(&*bi);
 
-        auto recordTracerFunc =
-            getTracerFunction(TracerFunction::Record);
+        auto recordTracerFunc = getTracerFunction(TracerFunction::Record);
         assert(recordTracerFunc && "Cannot find a record tracer function!");
 
-        ArrayRef<Value*> args = {pointerToTracer, builder.getInt32(loc->getLine()),
+        ArrayRef<Value*> args = {pointerToTracer,
+                                 builder.getInt32(loc->getLine()),
                                  builder.getInt32(loc->getColumn())};
 
         builder.CreateCall(recordTracerFunc, args);
@@ -129,7 +110,8 @@ int ControlFlowTracePass::getTracerFunctions(
     if (func.getName().contains("ControlFlowTracer") == false)
       continue;
     tracerFunctions.insert({func.getName(), &func});
-    errs() << "Function: " << func.getName() << " added into tracer functions\n";
+    errs() << "Function: " << func.getName()
+           << " added into tracer functions\n";
   }
   return function_num;
 }
