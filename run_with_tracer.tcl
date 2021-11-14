@@ -8,7 +8,7 @@ if { ![file exists $::HLS_LLVM_PLUGIN_DIR/control-flow-trace-pass.so] } {
 # Include our tracer pass to the Vitis workflow
 # Do Yoon: inject llvm-link call in LLVM custom command to inject our tracer modules into the given code.
 set ::LLVM_CUSTOM_CMD {[exec llvm-link -suppress-warnings $LLVM_CUSTOM_INPUT $::HLS_LLVM_TRACER_DIR/control-flow-tracer.bc -o $LLVM_CUSTOM_INPUT]}
-append ::LLVM_CUSTOM_CMD “, ” {[exec $LLVM_CUSTOM_OPT -load $::HLS_LLVM_PLUGIN_DIR/control-flow-trace-pass.so -controlflowtrace $LLVM_CUSTOM_INPUT -o $LLVM_CUSTOM_OUTPUT]}
+append ::LLVM_CUSTOM_CMD {$LLVM_CUSTOM_OPT -load $::HLS_LLVM_PLUGIN_DIR/control-flow-trace-pass.so -controlflowtrace $LLVM_CUSTOM_INPUT -o $LLVM_CUSTOM_OUTPUT}
 
 # Open a project and remove any existing data
 open_project -reset proj
@@ -23,7 +23,7 @@ add_files -tb testfunctions/sigma_test.cpp
 set_top sigma_n
 
 # Open a solution and remove any existing data
-open_solution -reset solution
+open_solution -reset -flow_target vitis solution
 
 # Set the target device
 set_part "virtex7"
