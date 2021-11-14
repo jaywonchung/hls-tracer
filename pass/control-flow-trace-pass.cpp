@@ -48,15 +48,20 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
 
   IRBuilder<> builder(module.getContext());
 
-  // Insu: Here get a global variable pointer (pointerToTracer),
-  // targeting named controlFlowTracer (defined in control-flow-trace-pass.cpp)
-  // pointerToTracer refers: ControlFlowTracer * (value: &controlFlowTracer);
-  GlobalVariable* controlFlowTracer =
-      module.getNamedGlobal("controlFlowTracer");
-  assert(controlFlowTracer != nullptr &&
-         "Cannot find a global ControlFlowTracer variable.");
-  Value* pointerToTracer = builder.CreatePointerCast(
-      controlFlowTracer, controlFlowTracer->getType());
+  /**
+   * Insu: targeting named controlFlowTracer (defined in control-flow-trace-pass.cpp)
+   * pointerToTracer refers: ControlFlowTracer * (value: &controlFlowTracer);
+   * 
+   * Nov 13: Now tracer has been changed to C style, with no global tracer instance,
+   * We don't have to store a pointer heading to the global variable.
+   * Code is remained to refer how to access pointer of the variable.
+   */
+  // GlobalVariable* controlFlowTracer =
+  //     module.getNamedGlobal("controlFlowTracer");
+  // assert(controlFlowTracer != nullptr &&
+  //        "Cannot find a global ControlFlowTracer variable.");
+  // Value* pointerToTracer = builder.CreatePointerCast(
+  //     controlFlowTracer, controlFlowTracer->getType());
 
   // Insu: Use llvm::IRBuilder to create a call and insert it.
   // TODO: Need to adjust insertion points.
@@ -67,14 +72,15 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
     // Inject init function
     auto initTracerFunc = getTracerFunction(TracerFunction::Init);
     assert(initTracerFunc && "Cannot find a record tracer function!");
-    auto fi = func.getBasicBlockList().begin()->begin();
+    auto fi = func.getBasicBlockList().begin()->getFirstInsertionPt();
     builder.SetInsertPoint(&*fi);
 
-    ArrayRef<Value*> args = {pointerToTracer, func.getArg(1),
+    ArrayRef<Value*> args = {func.getArg(1),
                              builder.getInt32(ITEM_WIDTH * MAX_ITEM_NUM)};
     builder.CreateCall(initTracerFunc, args);
     changed = true;
 
+#if 0
     for (auto& bb : func) {
       for (auto bi = bb.begin(), bend = bb.end(); bi != bend; bi++) {
         if (isa<BranchInst>(bi) == false)
@@ -98,8 +104,8 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
         changed = true;
       }
     }
+    #endif
   }
-
   return false;
 }
 
@@ -107,7 +113,7 @@ int ControlFlowTracePass::getTracerFunctions(
     Module::FunctionListType& functions) {
   int function_num = 0;
   for (auto& func : functions) {
-    if (func.getName().contains("ControlFlowTracer") == false)
+    if (func.getName().contains("controlFlowTracer") == false)
       continue;
     tracerFunctions.insert({func.getName(), &func});
     errs() << "Function: " << func.getName()
@@ -121,9 +127,9 @@ Function* ControlFlowTracePass::getTracerFunction(
   Function* func = nullptr;
   std::string key;
   if (tracerFunc == TracerFunction::Init)
-    key = "init";
+    key = "TracerInit";
   else if (tracerFunc == TracerFunction::Record)
-    key = "record";
+    key = "TracerRecord";
   else
     return nullptr;
 
