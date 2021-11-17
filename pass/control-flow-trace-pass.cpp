@@ -1,9 +1,10 @@
 #include <algorithm>
 #include <cassert>
+#include <cstdlib>
 #include <map>
 #include <string>
 #include <vector>
-#include <cstdlib>
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -43,23 +44,24 @@ ControlFlowTracePass::ControlFlowTracePass() : ModulePass(ID) {}
 #define MAX_ITEM_NUM 128
 
 bool ControlFlowTracePass::runOnModule(Module& module) {
-  bool changed = false;
   errs() << "Entered module " << module.getName() << ".\n";
   getTracerFunctions(module.getFunctionList());
 
   // Jae-Won: Get the name of the top-level function.
-  const char *top_func_name = std::getenv("HLS_TRACER_TOP_FUNCTION");
-  assert(top_func_name && "Environment variable HLS_TRACER_TOP_FUNCTION is not set.");
+  const char* top_func_name = std::getenv("HLS_TRACER_TOP_FUNCTION");
+  assert(top_func_name &&
+         "Environment variable HLS_TRACER_TOP_FUNCTION is not set.");
   errs() << "Using top-level function '" << top_func_name << "'.\n";
 
   IRBuilder<> builder(module.getContext());
 
   /**
-   * Insu: targeting named controlFlowTracer (defined in control-flow-trace-pass.cpp)
-   * pointerToTracer refers: ControlFlowTracer * (value: &controlFlowTracer);
-   * 
-   * Nov 13: Now tracer has been changed to C style, with no global tracer instance,
-   * We don't have to store a pointer heading to the global variable.
+   * Insu: targeting named controlFlowTracer (defined in
+   * control-flow-trace-pass.cpp) pointerToTracer refers: ControlFlowTracer *
+   * (value: &controlFlowTracer);
+   *
+   * Nov 13: Now tracer has been changed to C style, with no global tracer
+   * instance, We don't have to store a pointer heading to the global variable.
    * Code is remained to refer how to access pointer of the variable.
    */
   // GlobalVariable* controlFlowTracer =
@@ -79,43 +81,73 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
     auto initTracerFunc = getTracerFunction(TracerFunction::Init);
     assert(initTracerFunc && "Cannot find a record tracer function!");
     auto fi = func.getBasicBlockList().begin()->getFirstInsertionPt();
-    builder.SetInsertPoint(&*fi);
 
     ArrayRef<Value*> args = {func.getArg(1),
                              builder.getInt32(ITEM_WIDTH * MAX_ITEM_NUM)};
+
+    builder.SetInsertPoint(&*fi);
     builder.CreateCall(initTracerFunc, args);
-    changed = true;
 
     errs() << "Inserted init function in the top-level function.\n";
-    break;
 
-#if 0
+    /**
+     * Inject record functions.
+     * Algorithm: store all successor BBs of BBs, the last two instructions of
+     * which are cmp and branch. This tracks all branches and control flow.
+     * Next, we remove BBs from the list, the last two instructions of which are
+     * cmp and branch.
+     */
+    std::vector<BasicBlock*> record_candidate_bbs;
+
+    // First state: add all successor BBs of BBs with cmp+br.
     for (auto& bb : func) {
-      for (auto bi = bb.begin(), bend = bb.end(); bi != bend; bi++) {
-        if (isa<BranchInst>(bi) == false)
-          continue;
-        DILocation* loc = bi->getDebugLoc().get();
-        assert(loc && "Cannot find debug location");
-
-        // New instructions will be added here.
-        // Without this code a segfault occurs, saying
-        // "Error reading file: No such file or directory".
-        builder.SetInsertPoint(&*bi);
-
-        auto recordTracerFunc = getTracerFunction(TracerFunction::Record);
-        assert(recordTracerFunc && "Cannot find a record tracer function!");
-
-        ArrayRef<Value*> args = {pointerToTracer,
-                                 builder.getInt32(loc->getLine()),
-                                 builder.getInt32(loc->getColumn())};
-
-        builder.CreateCall(recordTracerFunc, args);
-        changed = true;
+      /**
+       * https://llvm.org/docs/LangRef.html#terminator-instructions
+       * Every block ends with a terminator instruction (== last instruction).
+       */
+      auto termi = bb.getTerminator();
+      if (isa<BranchInst>(termi) && termi->getPrevNode() &&
+          isa<CmpInst>(termi->getPrevNode())) {
+        for (auto succ : successors(&bb)) {
+          record_candidate_bbs.push_back(succ);
+        }
       }
     }
-    #endif
+
+    // Second stage: remove BBs if one ends with cmp+br.
+    auto remove = std::remove_if(
+        record_candidate_bbs.begin(), record_candidate_bbs.end(),
+        [](BasicBlock* bb) {
+          auto termi = bb->getTerminator();
+          return isa<BranchInst>(termi) && termi->getPrevNode() &&
+                 isa<CmpInst>(termi->getPrevNode());
+        });
+    record_candidate_bbs.erase(remove, record_candidate_bbs.end());
+
+    // Insert tracer function call at the first location of each target BB.
+    auto recordTracerFunc = getTracerFunction(TracerFunction::Record);
+    assert(initTracerFunc && "Cannot find a record tracer function!");
+    for (auto& bb : func) {
+      auto fi = bb.getFirstInsertionPt();
+
+      // Segmentation fault occurs if we use
+      // bb.getFirstInsertionPt()->getDebugLoc() or whatever.
+      // TODO: fix this targeting the first valid instruction.
+      DILocation* loc = bb.getTerminator()->getDebugLoc();
+      assert(loc && "Cannot find debug location!");
+      ArrayRef<Value*> args = {builder.getInt32(loc->getLine()),
+                               builder.getInt32(loc->getColumn())};
+
+      builder.SetInsertPoint(&*fi);
+      builder.CreateCall(recordTracerFunc, args);
+
+      errs() << "Inserted record function at: " << loc->getFilename() << ":"
+             << loc->getLine() << ":" << loc->getColumn() << "\n";
+    }
+    break;
   }
-  return false;
+
+  return true;
 }
 
 int ControlFlowTracePass::getTracerFunctions(
