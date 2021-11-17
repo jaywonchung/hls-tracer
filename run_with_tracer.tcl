@@ -19,8 +19,9 @@ add_files testfunctions/sigma.cpp
 add_files -tb testfunctions/sigma_test.cpp
 
 # Tell the top
-# # TODOL Make sigma_n configurable
-set_top sigma_n
+# TODO: Make sigma_n configurable
+set ::env(HLS_TRACER_TOP_FUNCTION) sigma_n
+set_top $::env(HLS_TRACER_TOP_FUNCTION)
 
 # Open a solution and remove any existing data
 open_solution -reset -flow_target vitis solution

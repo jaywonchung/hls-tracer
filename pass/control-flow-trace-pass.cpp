@@ -3,6 +3,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <cstdlib>
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -46,6 +47,11 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
   errs() << "Entered module " << module.getName() << ".\n";
   getTracerFunctions(module.getFunctionList());
 
+  // Jae-Won: Get the name of the top-level function.
+  const char *top_func_name = std::getenv("HLS_TRACER_TOP_FUNCTION");
+  assert(top_func_name && "Environment variable HLS_TRACER_TOP_FUNCTION is not set.");
+  errs() << "Using top-level function '" << top_func_name << "'.\n";
+
   IRBuilder<> builder(module.getContext());
 
   /**
@@ -66,7 +72,7 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
   // Insu: Use llvm::IRBuilder to create a call and insert it.
   // TODO: Need to adjust insertion points.
   for (auto& func : module.getFunctionList()) {
-    if (func.getName().contains("sigma_n") == false)
+    if (func.getName().contains(top_func_name) == false)
       continue;
 
     // Inject init function
@@ -79,6 +85,9 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
                              builder.getInt32(ITEM_WIDTH * MAX_ITEM_NUM)};
     builder.CreateCall(initTracerFunc, args);
     changed = true;
+
+    errs() << "Inserted init function in the top-level function.\n";
+    break;
 
 #if 0
     for (auto& bb : func) {
