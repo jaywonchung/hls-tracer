@@ -40,8 +40,7 @@ struct ControlFlowTracePass : public ModulePass {
 
 ControlFlowTracePass::ControlFlowTracePass() : ModulePass(ID) {}
 
-#define ITEM_WIDTH 8
-#define MAX_ITEM_NUM 128
+#define MAX_ITEM_NUM 256
 
 bool ControlFlowTracePass::runOnModule(Module& module) {
   errs() << "Entered module " << module.getName() << ".\n";
@@ -82,8 +81,7 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
     assert(initTracerFunc && "Cannot find a record tracer function!");
     auto fi = func.getBasicBlockList().begin()->getFirstInsertionPt();
 
-    ArrayRef<Value*> args = {func.getArg(1),
-                             builder.getInt32(ITEM_WIDTH * MAX_ITEM_NUM)};
+    ArrayRef<Value*> args = {builder.getInt32(MAX_ITEM_NUM)};
 
     builder.SetInsertPoint(&*fi);
     builder.CreateCall(initTracerFunc, args);
@@ -135,7 +133,8 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
       // TODO: fix this targeting the first valid instruction.
       DILocation* loc = bb.getTerminator()->getDebugLoc();
       assert(loc && "Cannot find debug location!");
-      ArrayRef<Value*> args = {builder.getInt32(loc->getLine()),
+      ArrayRef<Value*> args = {func.getArg(1),
+                               builder.getInt32(loc->getLine()),
                                builder.getInt32(loc->getColumn())};
 
       builder.SetInsertPoint(&*fi);
