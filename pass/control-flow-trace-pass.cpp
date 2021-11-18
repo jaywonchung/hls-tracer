@@ -138,8 +138,8 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
       auto inst = getInstructionLocationInfo(bb);
 
       ArrayRef<Value*> args = {func.getArg(0),
-                               builder.getInt32(loc->getLine()),
-                               builder.getInt32(loc->getColumn())};
+                               builder.getInt32(inst.second->getLine()),
+                               builder.getInt32(inst.second->getColumn())};
 
       builder.SetInsertPoint(inst.first);
       builder.CreateCall(recordTracerFunc, args);
