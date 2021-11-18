@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -32,7 +33,8 @@ struct ControlFlowTracePass : public ModulePass {
   Function* getTracerFunction(const TracerFunction tracerFunc);
   int getTracerFunctions(Module::FunctionListType& functions);
 
-  Instruction* getFirstInstructionLocatedInSource(const BasicBlock& bb);
+  std::pair<Instruction*, DILocation*> getInstructionLocationInfo(
+      const BasicBlock* bb);
 
  private:
   std::map<std::string, Function*> tracerFunctions;
@@ -126,19 +128,18 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
     auto recordTracerFunc = getTracerFunction(TracerFunction::Record);
     assert(initTracerFunc && "Cannot find a record tracer function!");
     for (auto bb : record_candidate_bbs) {
-      auto inst = getFirstInstructionLocatedInSource(*bb);
-      assert(inst != nullptr && "Cannot find source code location from BB!");
-      auto loc = inst->getDebugLoc().get();
-      
-      ArrayRef<Value*> args = {func.getArg(1),
-                               builder.getInt32(loc->getLine()),
-                               builder.getInt32(loc->getColumn())};
+      auto inst = getInstructionLocationInfo(bb);
 
-      builder.SetInsertPoint(inst);
+      ArrayRef<Value*> args = {func.getArg(1),
+                               builder.getInt32(inst.second->getLine()),
+                               builder.getInt32(inst.second->getColumn())};
+
+      builder.SetInsertPoint(inst.first);
       builder.CreateCall(recordTracerFunc, args);
 
-      errs() << "Inserted record function at: " << loc->getFilename() << ":"
-             << loc->getLine() << ":" << loc->getColumn() << "\n";
+      errs() << "Inserted record function at: " << inst.second->getFilename()
+             << ":" << inst.second->getLine() << ":" << inst.second->getColumn()
+             << "\n";
     }
     break;
   }
@@ -146,19 +147,31 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
   return true;
 }
 
-Instruction* ControlFlowTracePass::getFirstInstructionLocatedInSource(const BasicBlock& bb) {
-  Instruction *inst = nullptr;
-  for (auto bi = bb.begin(), bend = bb.end(); bi != bend; bi++) {
+std::pair<Instruction*, DILocation*>
+ControlFlowTracePass::getInstructionLocationInfo(const BasicBlock* bb) {
+  for (auto bi = bb->begin(), bend = bb->end(); bi != bend; bi++) {
     auto loc = bi->getDebugLoc().get();
-    // bi->print(errs()); errs() << ": " << loc << "\n";
+    bi->print(errs());
+    errs() << ": " << loc << "\n";
     if (loc) {
-      // loc->print(errs()); errs() << "\n\n";
-      inst = const_cast<Instruction*>(&*bi);
-      break;
-    } 
+      loc->print(errs());
+      errs() << "\n\n";
+      return {const_cast<Instruction*>(&*bi), loc};
+    }
   }
 
-  return inst;
+  // If no instruction with source info found,
+  // borrow instruction information from successor BB.
+  // Instruction location will be the first instruction in this BB.
+  auto* bb_succ = bb->getSingleSuccessor();
+  std::pair<Instruction*, DILocation*> info;
+  do {
+    info = getInstructionLocationInfo(bb_succ);
+    bb_succ = bb_succ->getSingleSuccessor();
+  } while (info.first == nullptr);
+
+  const Instruction* inst = &*bb->getFirstInsertionPt();
+  return {const_cast<Instruction*>(inst), info.second};
 }
 
 int ControlFlowTracePass::getTracerFunctions(
