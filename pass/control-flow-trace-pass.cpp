@@ -81,7 +81,7 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
 
       // Parse out the dimension hint attribute from the trace array.
       int array_size;
-      auto param_attr = func.getAttributes().getParamAttr(1, "fpga.decayed.dim.hint");
+      auto param_attr = func.getAttributes().getParamAttr(0, "fpga.decayed.dim.hint");
       if (param_attr.getValueAsString().getAsInteger(10, array_size)) {
         errs() << "Failed to parse integer from \"fpga.decayed.dim.hint\" attribute.\n";
         exit(1);
@@ -137,9 +137,9 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
     for (auto bb : record_candidate_bbs) {
       auto inst = getInstructionLocationInfo(bb);
 
-      ArrayRef<Value*> args = {func.getArg(1),
-                               builder.getInt32(inst.second->getLine()),
-                               builder.getInt32(inst.second->getColumn())};
+      ArrayRef<Value*> args = {func.getArg(0),
+                               builder.getInt32(loc->getLine()),
+                               builder.getInt32(loc->getColumn())};
 
       builder.SetInsertPoint(inst.first);
       builder.CreateCall(recordTracerFunc, args);

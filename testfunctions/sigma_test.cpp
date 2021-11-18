@@ -2,27 +2,30 @@
 
 #define ARR_SZ 256
 
-extern int sigma_n(int, int a[ARR_SZ]);
+extern int top(int arr[ARR_SZ], int n);
 
-void run_test(int n, int ans, int *test) {
-  printf("Running sigma_n(%d, test)...\n", n);
-  int out = sigma_n(n, test);
+void run_test(int n, int ans, int *trace) {
+  printf("Running sigma_n(%d, trace)...\n", n);
+  int out = top(trace, n);
   printf("%s\n", "Function successfully returned. Content of trace array:");
   for (int i = 0; i < ARR_SZ; i++)
-    printf("%c%d%c", " ["[i==0], test[i], ",]"[i==ARR_SZ-1]);
+    printf("%c%d%c", " ["[i==0], trace[i], ",]"[i==ARR_SZ-1]);
   printf("\n");
   if (out != ans) {
-    printf("Expected sigma_n(%d, test) to be %d but got %d.\n", n, ans, out);
+    printf("Expected sigma_n(%d, trace) to be %d but got %d.\n", n, ans, out);
     exit(1);
   }
 }
 
 int main() {
   std::cout << "Entered main" << std::endl;
-  int test[ARR_SZ] = {0};
+  int trace[ARR_SZ] = {0};
   
-  run_test(5, 15, test);
-  run_test(20, 210, test);
+  run_test(5, 15, trace);
+  for (int i=0; i<ARR_SZ; i++) trace[i] = 0;
+
+  run_test(20, 210, trace);
+  for (int i=0; i<ARR_SZ; i++) trace[i] = 0;
 
   return 0;
 }
