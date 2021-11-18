@@ -42,8 +42,6 @@ struct ControlFlowTracePass : public ModulePass {
 
 ControlFlowTracePass::ControlFlowTracePass() : ModulePass(ID) {}
 
-#define MAX_ITEM_NUM 256
-
 bool ControlFlowTracePass::runOnModule(Module& module) {
   errs() << "Entered module " << module.getName() << ".\n";
   getTracerFunctions(module.getFunctionList());
@@ -75,20 +73,29 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
   // Insu: Use llvm::IRBuilder to create a call and insert it.
   // TODO: Need to adjust insertion points.
   for (auto& func : module.getFunctionList()) {
-    if (func.getName().contains(top_func_name) == false)
-      continue;
+    // Found the top level function. Inject init function call.
+    if (func.getName().contains(top_func_name)) {
+      auto initTracerFunc = getTracerFunction(TracerFunction::Init);
+      assert(initTracerFunc && "Cannot find a record tracer function!");
+      auto fi = func.getBasicBlockList().begin()->getFirstInsertionPt();
 
-    // Inject init function
-    auto initTracerFunc = getTracerFunction(TracerFunction::Init);
-    assert(initTracerFunc && "Cannot find a record tracer function!");
-    auto fi = func.getBasicBlockList().begin()->getFirstInsertionPt();
+      // Parse out the dimension hint attribute from the trace array.
+      int array_size;
+      auto param_attr = func.getAttributes().getParamAttr(1, "fpga.decayed.dim.hint");
+      if (param_attr.getValueAsString().getAsInteger(10, array_size)) {
+        errs() << "Failed to parse integer from \"fpga.decayed.dim.hint\" attribute.\n";
+        exit(1);
+      }
 
-    ArrayRef<Value*> args = {builder.getInt32(MAX_ITEM_NUM)};
+      errs() << "Trace array size is " << array_size << ".\n";
 
-    builder.SetInsertPoint(&*fi);
-    builder.CreateCall(initTracerFunc, args);
+      ArrayRef<Value*> args = {builder.getInt32(array_size)};
 
-    errs() << "Inserted init function in the top-level function.\n";
+      builder.SetInsertPoint(&*fi);
+      builder.CreateCall(initTracerFunc, args);
+
+      errs() << "Inserted init function in the top-level function.\n";
+    }
 
     /**
      * Inject record functions.
@@ -126,7 +133,7 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
 
     // Insert tracer function call at the first location of each target BB.
     auto recordTracerFunc = getTracerFunction(TracerFunction::Record);
-    assert(initTracerFunc && "Cannot find a record tracer function!");
+    assert(recordTracerFunc && "Cannot find a record tracer function!");
     for (auto bb : record_candidate_bbs) {
       auto inst = getInstructionLocationInfo(bb);
 
