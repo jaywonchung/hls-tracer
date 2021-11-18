@@ -124,12 +124,12 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
 
     // Insert tracer function call at the first location of each target BB.
     auto recordTracerFunc = getTracerFunction(TracerFunction::Record);
-    assert(initTracerFunc && "Cannot find a record tracer function!");
+    assert(recordTracerFunc && "Cannot find a record tracer function!");
     for (auto bb : record_candidate_bbs) {
       auto inst = getFirstInstructionLocatedInSource(*bb);
       assert(inst != nullptr && "Cannot find source code location from BB!");
       auto loc = inst->getDebugLoc().get();
-      
+
       ArrayRef<Value*> args = {func.getArg(1),
                                builder.getInt32(loc->getLine()),
                                builder.getInt32(loc->getColumn())};
@@ -155,7 +155,7 @@ Instruction* ControlFlowTracePass::getFirstInstructionLocatedInSource(const Basi
       // loc->print(errs()); errs() << "\n\n";
       inst = const_cast<Instruction*>(&*bi);
       break;
-    } 
+    }
   }
 
   return inst;
