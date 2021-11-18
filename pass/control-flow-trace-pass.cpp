@@ -32,6 +32,8 @@ struct ControlFlowTracePass : public ModulePass {
   Function* getTracerFunction(const TracerFunction tracerFunc);
   int getTracerFunctions(Module::FunctionListType& functions);
 
+  Instruction* getFirstInstructionLocatedInSource(const BasicBlock& bb);
+
  private:
   std::map<std::string, Function*> tracerFunctions;
 };
@@ -123,19 +125,16 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
     // Insert tracer function call at the first location of each target BB.
     auto recordTracerFunc = getTracerFunction(TracerFunction::Record);
     assert(initTracerFunc && "Cannot find a record tracer function!");
-    for (auto& bb : func) {
-      auto fi = bb.getFirstInsertionPt();
-
-      // Segmentation fault occurs if we use
-      // bb.getFirstInsertionPt()->getDebugLoc() or whatever.
-      // TODO: fix this targeting the first valid instruction.
-      DILocation* loc = bb.getTerminator()->getDebugLoc();
-      assert(loc && "Cannot find debug location!");
+    for (auto bb : record_candidate_bbs) {
+      auto inst = getFirstInstructionLocatedInSource(*bb);
+      assert(inst != nullptr && "Cannot find source code location from BB!");
+      auto loc = inst->getDebugLoc().get();
+      
       ArrayRef<Value*> args = {func.getArg(1),
                                builder.getInt32(loc->getLine()),
                                builder.getInt32(loc->getColumn())};
 
-      builder.SetInsertPoint(&*fi);
+      builder.SetInsertPoint(inst);
       builder.CreateCall(recordTracerFunc, args);
 
       errs() << "Inserted record function at: " << loc->getFilename() << ":"
@@ -145,6 +144,21 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
   }
 
   return true;
+}
+
+Instruction* ControlFlowTracePass::getFirstInstructionLocatedInSource(const BasicBlock& bb) {
+  Instruction *inst = nullptr;
+  for (auto bi = bb.begin(), bend = bb.end(); bi != bend; bi++) {
+    auto loc = bi->getDebugLoc().get();
+    // bi->print(errs()); errs() << ": " << loc << "\n";
+    if (loc) {
+      // loc->print(errs()); errs() << "\n\n";
+      inst = const_cast<Instruction*>(&*bi);
+      break;
+    } 
+  }
+
+  return inst;
 }
 
 int ControlFlowTracePass::getTracerFunctions(
