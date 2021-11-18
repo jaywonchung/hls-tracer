@@ -79,7 +79,7 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
 
       // Parse out the dimension hint attribute from the trace array.
       int array_size;
-      auto param_attr = func.getAttributes().getParamAttr(1, "fpga.decayed.dim.hint");
+      auto param_attr = func.getAttributes().getParamAttr(0, "fpga.decayed.dim.hint");
       if (param_attr.getValueAsString().getAsInteger(10, array_size)) {
         errs() << "Failed to parse integer from \"fpga.decayed.dim.hint\" attribute.\n";
         exit(1);
@@ -137,7 +137,7 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
       assert(inst != nullptr && "Cannot find source code location from BB!");
       auto loc = inst->getDebugLoc().get();
 
-      ArrayRef<Value*> args = {func.getArg(1),
+      ArrayRef<Value*> args = {func.getArg(0),
                                builder.getInt32(loc->getLine()),
                                builder.getInt32(loc->getColumn())};
 

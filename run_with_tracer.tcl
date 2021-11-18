@@ -20,7 +20,7 @@ add_files -tb testfunctions/sigma_test.cpp
 
 # Tell the top
 # TODO: Make sigma_n configurable
-set ::env(HLS_TRACER_TOP_FUNCTION) sigma_n
+set ::env(HLS_TRACER_TOP_FUNCTION) top
 set_top $::env(HLS_TRACER_TOP_FUNCTION)
 
 # Open a solution and remove any existing data
