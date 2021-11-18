@@ -2,17 +2,17 @@
 
 #define ARR_SZ 256
 
-extern int loop(int, int a[ARR_SZ], float);
+extern int hot_loop(int, int a[ARR_SZ], float);
 
 void run_test(int n, int ans, int *test, float if_prob) {
-  printf("Running loop(%d, test)...\n", n);
-  int out = loop(n, test, if_prob);
+  printf("Running hot_loop(%d, test)...\n", n);
+  int out = hot_loop(n, test, if_prob);
   printf("%s\n", "Function successfully returned. Content of trace array:");
   for (int i = 0; i < ARR_SZ; i++)
     printf("%c%d%c", " ["[i==0], test[i], ",]"[i==ARR_SZ-1]);
   printf("\n");
   if (out != ans) {
-    printf("Expected loop(%d, test, %f) to be %d but got %d.\n", n, if_prob, ans, out);
+    printf("Expected hot_loop(%d, test, %f) to be %d but got %d.\n", n, if_prob, ans, out);
     exit(1);
   }
 }
