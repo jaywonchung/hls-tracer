@@ -10,7 +10,7 @@ int abs(int *trace, int data) {
   }
 }
 
-int top(int trace[256]) {
+int top(int trace[258]) {
   int acc = 0;
   for (int i=0; i<=20; i++) {
     acc += abs(trace, i-10);

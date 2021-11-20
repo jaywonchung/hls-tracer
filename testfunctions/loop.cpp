@@ -1,6 +1,6 @@
 static float cond[10] = {0.3, 0.4, 0.8, 0.7, 0.1, 0.6, 0.9, 0.5, 0.2, 1.0};
 
-int top(int trace[257], int n, float if_prob) {
+int top(int trace[258], int n, float if_prob) {
 #pragma HLS INTERFACE m_axi port=trace
 
   int sum = 0;

@@ -1,6 +1,7 @@
 #include <iostream>
+#include "get_result_json.h"
 
-#define ARR_SZ 256
+#define ARR_SZ 258
 
 extern int top(int trace[ARR_SZ]);
 
@@ -15,6 +16,8 @@ void run_test(int ans, int *trace) {
     printf("Expected call(trace) to be %d but got %d.\n", ans, out);
     exit(1);
   }
+
+  std::cout << getResultInJson(trace, ARR_SZ).dump() << std::endl;
 }
 
 int main() {

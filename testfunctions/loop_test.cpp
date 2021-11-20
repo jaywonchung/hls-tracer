@@ -2,7 +2,7 @@
 #include <cstring>
 #include "get_result_json.h"
 
-#define ARR_SZ 257
+#define ARR_SZ 258
 
 extern int top(int a[ARR_SZ], int, float);
 
@@ -10,15 +10,15 @@ void run_test(int n, int ans, int *trace, float if_prob) {
   printf("Running hot_loop(%d, trace)...\n", n);
   int out = top(trace, n, if_prob);
   printf("%s\n", "Function successfully returned. Content of trace array:");
-  // for (int i = 0; i < ARR_SZ; i++)
-  //   printf("%c%d%c", " ["[i==0], trace[i], ",]"[i==ARR_SZ-1]);
-  // printf("\n");
+  for (int i = 0; i < ARR_SZ; i++)
+    printf("%c%d%c", " ["[i==0], trace[i], ",]"[i==ARR_SZ-1]);
+  printf("\n");
   if (out != ans) {
     printf("Expected hot_loop(%d, trace, %f) to be %d but got %d.\n", n, if_prob, ans, out);
     exit(1);
   }
 
-  std::cout << getResultInJson(trace, ARR_SZ).dump(2) << std::endl;
+  std::cout << getResultInJson(trace, ARR_SZ).dump() << std::endl;
 }
 
 int main() {
