@@ -109,7 +109,7 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
             continue;
 
           auto writeIndexTracerFunc = getTracerFunction(TracerFunction::WriteIndex);
-          assert(recordTracerFunc && "Cannot find a write index tracer function!");
+          assert(writeIndexTracerFunc && "Cannot find a write index tracer function!");
 
           ArrayRef<Value*> args = {func.getArg(0)};
 
@@ -229,7 +229,7 @@ Function* ControlFlowTracePass::getTracerFunction(
     key = "TracerRecord";
   else if (tracerFunc == TracerFunction::WriteIndex)
     key = "WriteCurrentIndex";
-  else 
+  else
     return nullptr;
 
   // This checks whether the given key value is contained in the map element's
