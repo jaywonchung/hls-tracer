@@ -172,8 +172,6 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
              << ":" << inst.second->getLine() << ":" << inst.second->getColumn()
              << "\n";
     }
-
-    break;
   }
 
   return true;
