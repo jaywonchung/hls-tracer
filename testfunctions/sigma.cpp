@@ -1,4 +1,4 @@
-int top(int trace[256], int n) {
+int top(int trace[257], int n) {
 #pragma HLS INTERFACE m_axi port=trace
   
   if (n > 128) {

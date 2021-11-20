@@ -1,6 +1,6 @@
 #include <iostream>
 
-#define ARR_SZ 256
+#define ARR_SZ 257
 
 extern int top(int a[ARR_SZ], int, float);
 

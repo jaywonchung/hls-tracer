@@ -1,6 +1,6 @@
 #include <iostream>
 
-#define ARR_SZ 256
+#define ARR_SZ 257
 
 extern int top(int arr[ARR_SZ], int n);
 
@@ -26,6 +26,8 @@ int main() {
 
   run_test(20, 210, trace);
   for (int i=0; i<ARR_SZ; i++) trace[i] = 0;
+
+  run_test(200, -1, trace);
 
   return 0;
 }

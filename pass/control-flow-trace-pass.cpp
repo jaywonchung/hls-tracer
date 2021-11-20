@@ -22,6 +22,7 @@ namespace {
 enum class TracerFunction : int {
   Init,
   Record,
+  WriteIndex,
 };
 
 struct ControlFlowTracePass : public ModulePass {
@@ -95,6 +96,29 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
       builder.CreateCall(initTracerFunc, args);
 
       errs() << "Inserted init function in the top-level function.\n";
+
+
+      /**
+       * Check whether there are return statements.
+       * Inject a write current index before ret statement.
+       * This injction is for writing how many traces are inserted in DRAM.
+       */
+      for (auto& bb : func) {
+        for (auto& inst : bb) {
+          if (isa<ReturnInst>(&inst) == false)
+            continue;
+
+          auto writeIndexTracerFunc = getTracerFunction(TracerFunction::WriteIndex);
+          assert(recordTracerFunc && "Cannot find a write index tracer function!");
+
+          ArrayRef<Value*> args = {func.getArg(0)};
+
+          builder.SetInsertPoint(&inst);
+          builder.CreateCall(writeIndexTracerFunc, args);
+
+          errs() << "Inserted write index function.\n";
+        }
+      }
     }
 
     /**
@@ -148,6 +172,7 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
              << ":" << inst.second->getLine() << ":" << inst.second->getColumn()
              << "\n";
     }
+
     break;
   }
 
@@ -202,7 +227,9 @@ Function* ControlFlowTracePass::getTracerFunction(
     key = "TracerInit";
   else if (tracerFunc == TracerFunction::Record)
     key = "TracerRecord";
-  else
+  else if (tracerFunc == TracerFunction::WriteIndex)
+    key = "WriteCurrentIndex";
+  else 
     return nullptr;
 
   // This checks whether the given key value is contained in the map element's
