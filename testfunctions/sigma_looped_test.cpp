@@ -13,10 +13,10 @@ void run_test(int n, int ans, int *trace) {
   for (int i = 0; i < ARR_SZ; i++)
     printf("%c%d%c", " ["[i==0], trace[i], ",]"[i==ARR_SZ-1]);
   printf("\n");
-//   if (out != ans) {
-//     printf("Expected sigma_n(%d, trace) to be %d but got %d.\n", n, ans, out);
-//     exit(1);
-//   }
+  if (out != ans) {
+    printf("Expected sigma_n(%d, trace) to be %d but got %d.\n", n, ans, out);
+    exit(1);
+  }
 
   std::cout << getResultInJson(trace, ARR_SZ).dump() << std::endl;
 }
@@ -29,9 +29,6 @@ int main() {
   memset(trace, 0, ARR_SZ * sizeof(int));
 
   run_test(20, 210, trace);
-  memset(trace, 0, ARR_SZ * sizeof(int));
-
-  run_test(200, 1830, trace);
   memset(trace, 0, ARR_SZ * sizeof(int));
 
   return 0;
