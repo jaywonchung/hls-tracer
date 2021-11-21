@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <cassert>
 #include <cstdlib>
 #include <map>
 #include <string>
@@ -25,6 +24,14 @@ enum class TracerFunction : int {
   Finish,
 };
 
+template <typename T>
+void assert_(T val, const char *message) {
+  if (!val) {
+    errs() << message << '\n';
+    exit(1);
+  }
+}
+
 struct ControlFlowTracePass : public ModulePass {
   static char ID;
   ControlFlowTracePass();
@@ -49,41 +56,50 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
 
   // Jae-Won: Get the name of the top-level function.
   const char* top_func_name = std::getenv("HLS_TRACER_TOP_FUNCTION");
-  assert(top_func_name &&
-         "Environment variable HLS_TRACER_TOP_FUNCTION is not set.");
+  assert_(top_func_name, "Environment variable HLS_TRACER_TOP_FUNCTION is not set.");
   errs() << "Using top-level function '" << top_func_name << "'.\n";
 
   IRBuilder<> builder(module.getContext());
 
   // Insu: Use llvm::IRBuilder to create a call and insert it.
   for (auto& func : module.getFunctionList()) {
-    // Found the top level function. Inject init function call.
+    auto fname = func.getName();
+
+    // Skip functions from the control flow tracer, LLVM, and Vitis HLS.
+    if (fname.contains("ControlFlowTracer")
+        || fname.contains("llvm.dbg.declare")
+        || fname.contains("SpecArrayDimSizez")) {
+      continue;
+    }
+
+    // Found the top level function.
     if (func.getName().contains(top_func_name)) {
-      auto initTracerFunc = getTracerFunction(TracerFunction::Init);
-      assert(initTracerFunc && "Cannot find the init tracer function!");
-      auto fi = func.getBasicBlockList().begin()->getFirstInsertionPt();
-
-      // Parse out the dimension hint attribute from the trace array.
-      int array_size;
+      /**
+       * Inject the init tracer function call at the beginning.
+       * To do so, we must first figure out the size of the input trace array.
+       * This information can be parsed from Vitis HLS's custom clang argument
+       * attribute 'fpga.decayed.dim.hint'.
+       */
+      int array_size = 0;
       auto param_attr = func.getAttributes().getParamAttr(0, "fpga.decayed.dim.hint");
-      if (param_attr.getValueAsString().getAsInteger(10, array_size)) {
-        errs() << "Failed to parse integer from \"fpga.decayed.dim.hint\" attribute.\n";
-        exit(1);
-      }
-
+      bool failed = param_attr.getValueAsString().getAsInteger(10, array_size);
+      assert_(!failed, "Failed to parse integer from 'fpga.decayed.dim.hint' attribute.");
       errs() << "Trace array size is " << array_size << ".\n";
 
-      ArrayRef<Value*> args = {builder.getInt32(array_size)};
+      // Insert init function call.
+      auto initTracerFunc = getTracerFunction(TracerFunction::Init);
+      assert_(initTracerFunc, "Cannot find the init tracer function!");
+      auto fi = func.getBasicBlockList().begin()->getFirstInsertionPt();
 
+      ArrayRef<Value*> args = {builder.getInt32(array_size)};
       builder.SetInsertPoint(&*fi);
       builder.CreateCall(initTracerFunc, args);
 
       errs() << "Inserted init function in the top-level function.\n";
 
-
       /**
        * Check whether there are return statements.
-       * Inject a write current index before ret statement.
+       * Inject a finish tracer function call before each ret statement.
        * This injction is for writing how many traces are inserted in DRAM.
        */
       for (auto& bb : func) {
@@ -92,24 +108,28 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
             continue;
 
           auto writeIndexTracerFunc = getTracerFunction(TracerFunction::Finish);
-          assert(writeIndexTracerFunc && "Cannot find the finish tracer function!");
+          assert_(writeIndexTracerFunc, "Cannot find the finish tracer function!");
 
           ArrayRef<Value*> args = {func.getArg(0)};
 
           builder.SetInsertPoint(&inst);
           builder.CreateCall(writeIndexTracerFunc, args);
 
-          errs() << "Inserted write index function.\n";
+          errs() << "Inserted finish function.\n";
         }
       }
     }
 
     /**
      * Inject record functions.
-     * Algorithm: store all successor BBs of BBs, the last two instructions of
-     * which are cmp and branch. This tracks all branches and control flow.
-     * Next, we remove BBs from the list, the last two instructions of which are
-     * cmp and branch.
+     *
+     * Algorithm: Figure out candidate BBs where we would like to insert calls.
+     * First, store all successor BBs of BBs that end with a conditional branch.
+     * Recording control flow at all these branches are sufficient to record the
+     * control flow.
+     * Next, we remove BBs that end with a conditional branch themselves. These BBs
+     * are essentially redundant because every control flow that reaches these BBs
+     * are tracked by their successor BBs.
      */
     std::vector<BasicBlock*> record_candidate_bbs;
 
@@ -119,28 +139,26 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
        * https://llvm.org/docs/LangRef.html#terminator-instructions
        * Every block ends with a terminator instruction (== last instruction).
        */
-      auto termi = bb.getTerminator();
-      if (isa<BranchInst>(termi) && termi->getPrevNode() &&
-          isa<CmpInst>(termi->getPrevNode())) {
+      auto termi = dyn_cast<BranchInst>(bb.getTerminator());
+      if (termi && termi->isConditional()) {
         for (auto succ : successors(&bb)) {
           record_candidate_bbs.push_back(succ);
         }
       }
     }
 
-    // Second stage: remove BBs if one ends with cmp+br.
+    // Second stage: remove BBs if it ends with a conditional branch.
     auto remove = std::remove_if(
         record_candidate_bbs.begin(), record_candidate_bbs.end(),
         [](BasicBlock* bb) {
-          auto termi = bb->getTerminator();
-          return isa<BranchInst>(termi) && termi->getPrevNode() &&
-                 isa<CmpInst>(termi->getPrevNode());
+          auto termi = dyn_cast<BranchInst>(bb->getTerminator());
+          return termi && termi->isConditional();
         });
     record_candidate_bbs.erase(remove, record_candidate_bbs.end());
 
     // Insert tracer function call at the first location of each target BB.
     auto recordTracerFunc = getTracerFunction(TracerFunction::Record);
-    assert(recordTracerFunc && "Cannot find the record tracer function!");
+    assert_(recordTracerFunc, "Cannot find the record tracer function!");
     for (auto bb : record_candidate_bbs) {
       auto inst = getInstructionLocationInfo(bb);
 
@@ -151,7 +169,7 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
       builder.SetInsertPoint(inst.first);
       builder.CreateCall(recordTracerFunc, args);
 
-      errs() << "Inserted record function at: " << inst.second->getFilename()
+      errs() << "Inserted record function at " << inst.second->getFilename()
              << ":" << inst.second->getLine() << ":" << inst.second->getColumn()
              << "\n";
     }
@@ -160,15 +178,15 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
   return true;
 }
 
+// Find the first instruction beginning from the top of the given basic block
+// that has a debug location. Recursively find successive basic blocks if
+// none is found in the current basic block.
 std::pair<Instruction*, DILocation*>
 ControlFlowTracePass::getInstructionLocationInfo(const BasicBlock* bb) {
+  // First search through this BB.
   for (auto bi = bb->begin(), bend = bb->end(); bi != bend; bi++) {
     auto loc = bi->getDebugLoc().get();
-    bi->print(errs());
-    errs() << ": " << loc << "\n";
     if (loc) {
-      loc->print(errs());
-      errs() << "\n\n";
       return {const_cast<Instruction*>(&*bi), loc};
     }
   }
@@ -177,16 +195,15 @@ ControlFlowTracePass::getInstructionLocationInfo(const BasicBlock* bb) {
   // borrow instruction information from successor BB.
   // Instruction location will be the first instruction in this BB.
   auto* bb_succ = bb->getSingleSuccessor();
+  assert_(bb_succ, "Multiple (or zero) successors encountered in getInstructionLocationInfo.");
   std::pair<Instruction*, DILocation*> info;
-  do {
-    info = getInstructionLocationInfo(bb_succ);
-    bb_succ = bb_succ->getSingleSuccessor();
-  } while (info.first == nullptr);
-
+  info = getInstructionLocationInfo(bb_succ);
   const Instruction* inst = &*bb->getFirstInsertionPt();
   return {const_cast<Instruction*>(inst), info.second};
 }
 
+// Find control flow tracer functions from the current module and
+// cache their pointers in a map.
 int ControlFlowTracePass::getTracerFunctions(
     Module::FunctionListType& functions) {
   int function_num = 0;
@@ -231,6 +248,6 @@ Function* ControlFlowTracePass::getTracerFunction(
 
 char ControlFlowTracePass::ID = 0;
 static RegisterPass<ControlFlowTracePass> X("controlflowtrace",
-                                            "Pass for tracing control flow",
+                                            "Instrument the source code with control flow tracing functions.",
                                             false,
                                             false);

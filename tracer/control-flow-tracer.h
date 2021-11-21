@@ -20,6 +20,9 @@
 // one record writes two integers, line number and column number). Then
 // the later two entries each contain the current index and the wrap indicator.
 
+#ifndef _CONTROL_FLOW_TRACER_H_
+#define _CONTROL_FLOW_TRACER_H_
+
 // The index of the trace array where the next write will happen.
 static int current_index_;
 // A boolean indicator that shows whether an index wrap occurred.
@@ -49,3 +52,5 @@ void controlFlowTracerRecord(int *array, int row, int column);
 // trace array. Called right before the return instruction of the top-level
 // function.
 void controlFlowTracerFinish(int *array);
+
+#endif
