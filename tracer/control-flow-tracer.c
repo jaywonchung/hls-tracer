@@ -14,8 +14,8 @@ void controlFlowTracerRecord(int *array, int row, int column) {
   array[current_index_] = row;
   array[current_index_ + 1] = column;
   current_index_ += 2;
-  wrapped_ |= (current_index_ & buffer_wrapped_mask_);  // bitwise-and is non-zero when current_index_ == 2^n
-  current_index_ &= buffer_size_mask_; // bitwise-and ensures range 0 ~ 2^n - 1
+  wrapped_ |= (current_index_ & buffer_wrapped_mask_);  // bitwise-and is non-zero when current_index_ >= 2^n
+  current_index_ &= buffer_size_mask_; // bitwise-and ensures current_index_ range 0 ~ 2^n - 1
 }
 
 void controlFlowTracerFinish(int *array) {
