@@ -3,7 +3,7 @@
 # The TCL script first prepends a invocation to llvm-link to
 # LLVM_CUSTOM_CMD. This is executed right before the tracer pass
 # is executed by opt. The output of llvm-link is suppressed so that
-# it does not cantaminate the actual command in LLVM_CUSTOM_CMD.
+# it does not contaminate the actual command in LLVM_CUSTOM_CMD.
 #
 # Requires the following three environment variables to be set:
 # - HLS_TRACER_USER_CODE:    The C/C++ code to be added as source
@@ -16,7 +16,7 @@
 # Note:
 #   Consider using run.sh with the files in testfunctions/ to get started.
 
-# Check whether the tracer instrumnetation pass is built
+# Check whether the tracer instrumentation pass is built
 set ::HLS_LLVM_PLUGIN_DIR pass
 set ::HLS_LLVM_TRACER_DIR tracer
 if { ![file exists $::HLS_LLVM_PLUGIN_DIR/control-flow-trace-pass.so] } {
