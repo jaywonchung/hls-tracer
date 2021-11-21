@@ -22,7 +22,7 @@ namespace {
 enum class TracerFunction : int {
   Init,
   Record,
-  WriteIndex,
+  Finish,
 };
 
 struct ControlFlowTracePass : public ModulePass {
@@ -55,29 +55,12 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
 
   IRBuilder<> builder(module.getContext());
 
-  /**
-   * Insu: targeting named controlFlowTracer (defined in
-   * control-flow-trace-pass.cpp) pointerToTracer refers: ControlFlowTracer *
-   * (value: &controlFlowTracer);
-   *
-   * Nov 13: Now tracer has been changed to C style, with no global tracer
-   * instance, We don't have to store a pointer heading to the global variable.
-   * Code is remained to refer how to access pointer of the variable.
-   */
-  // GlobalVariable* controlFlowTracer =
-  //     module.getNamedGlobal("controlFlowTracer");
-  // assert(controlFlowTracer != nullptr &&
-  //        "Cannot find a global ControlFlowTracer variable.");
-  // Value* pointerToTracer = builder.CreatePointerCast(
-  //     controlFlowTracer, controlFlowTracer->getType());
-
   // Insu: Use llvm::IRBuilder to create a call and insert it.
-  // TODO: Need to adjust insertion points.
   for (auto& func : module.getFunctionList()) {
     // Found the top level function. Inject init function call.
     if (func.getName().contains(top_func_name)) {
       auto initTracerFunc = getTracerFunction(TracerFunction::Init);
-      assert(initTracerFunc && "Cannot find a record tracer function!");
+      assert(initTracerFunc && "Cannot find the init tracer function!");
       auto fi = func.getBasicBlockList().begin()->getFirstInsertionPt();
 
       // Parse out the dimension hint attribute from the trace array.
@@ -108,8 +91,8 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
           if (isa<ReturnInst>(&inst) == false)
             continue;
 
-          auto writeIndexTracerFunc = getTracerFunction(TracerFunction::WriteIndex);
-          assert(writeIndexTracerFunc && "Cannot find a write index tracer function!");
+          auto writeIndexTracerFunc = getTracerFunction(TracerFunction::Finish);
+          assert(writeIndexTracerFunc && "Cannot find the finish tracer function!");
 
           ArrayRef<Value*> args = {func.getArg(0)};
 
@@ -157,7 +140,7 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
 
     // Insert tracer function call at the first location of each target BB.
     auto recordTracerFunc = getTracerFunction(TracerFunction::Record);
-    assert(recordTracerFunc && "Cannot find a record tracer function!");
+    assert(recordTracerFunc && "Cannot find the record tracer function!");
     for (auto bb : record_candidate_bbs) {
       auto inst = getInstructionLocationInfo(bb);
 
@@ -225,8 +208,8 @@ Function* ControlFlowTracePass::getTracerFunction(
     key = "TracerInit";
   else if (tracerFunc == TracerFunction::Record)
     key = "TracerRecord";
-  else if (tracerFunc == TracerFunction::WriteIndex)
-    key = "WriteCurrentIndex";
+  else if (tracerFunc == TracerFunction::Finish)
+    key = "TracerFinish";
   else
     return nullptr;
 
