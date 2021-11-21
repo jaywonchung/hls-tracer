@@ -2,7 +2,7 @@
 #
 # The TCL script first prepends a invocation to llvm-link to
 # LLVM_CUSTOM_CMD. This is executed right before the tracer pass
-# is executed by opt. The output of llvm-link is suppressed to that
+# is executed by opt. The output of llvm-link is suppressed so that
 # it does not cantaminate the actual command in LLVM_CUSTOM_CMD.
 #
 # Requires the following three environment variables to be set:
