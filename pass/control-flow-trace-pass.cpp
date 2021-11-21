@@ -107,13 +107,13 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
           if (isa<ReturnInst>(&inst) == false)
             continue;
 
-          auto writeIndexTracerFunc = getTracerFunction(TracerFunction::Finish);
-          assert_(writeIndexTracerFunc, "Cannot find the finish tracer function!");
+          auto finishTracerFunc = getTracerFunction(TracerFunction::Finish);
+          assert_(finishTracerFunc, "Cannot find the finish tracer function!");
 
           ArrayRef<Value*> args = {func.getArg(0)};
 
           builder.SetInsertPoint(&inst);
-          builder.CreateCall(writeIndexTracerFunc, args);
+          builder.CreateCall(finishTracerFunc, args);
 
           errs() << "Inserted finish function.\n";
         }
