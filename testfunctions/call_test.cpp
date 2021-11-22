@@ -21,6 +21,7 @@ void run_test(int ans, int *trace) {
 }
 
 int main() {
+  printf("Entered main.\n");
   int trace[ARR_SZ] = {0};
   run_test(110, trace);
 }
