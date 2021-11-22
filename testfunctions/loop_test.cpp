@@ -18,7 +18,9 @@ void run_test(int n, int ans, int *trace, float if_prob) {
     exit(1);
   }
 
-  std::cout << getResultInJson(trace, ARR_SZ).dump() << std::endl;
+  std::string filename = "trace-" + std::to_string(n) + "-" + std::to_string(if_prob) + ".json";
+  json output = getResultInJson(trace, ARR_SZ, filename);
+//   std::cout << output.dump() << std::endl;
 }
 
 int main() {

@@ -17,7 +17,8 @@ void run_test(int ans, int *trace) {
     exit(1);
   }
 
-  std::cout << getResultInJson(trace, ARR_SZ).dump() << std::endl;
+  json output = getResultInJson(trace, ARR_SZ, "trace.json");
+//   std::cout << output.dump() << std::endl;
 }
 
 int main() {
