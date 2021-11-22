@@ -7,7 +7,7 @@ However, the lack of observability in hardware precludes both convenient debuggi
 Thus, in this project, we aim to implement control flow tracing for HLS.
 The goal of our framework is to transparently instrument the high-level code via a custom LLVM pass to allow traces to be collected directly on FPGAs.
 
-## Getting Started
+## How it Works
 
 We provide some simple test workloads inside the `testfunctions` directory.
 For example, to run `testfunctions/sigma.cpp` and see the collected trace with RTL simulation, run the following:
