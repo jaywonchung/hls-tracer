@@ -73,7 +73,7 @@ bool ControlFlowTracePass::runOnModule(Module& module) {
     }
 
     // Found the top level function.
-    if (func.getName().contains(top_func_name)) {
+    if (fname.contains(top_func_name)) {
       /**
        * Inject the init tracer function call at the beginning.
        * To do so, we must first figure out the size of the input trace array.
@@ -208,11 +208,11 @@ int ControlFlowTracePass::getTracerFunctions(
     Module::FunctionListType& functions) {
   int function_num = 0;
   for (auto& func : functions) {
-    if (func.getName().contains("controlFlowTracer") == false)
+    auto fname = func.getName();
+    if (fname.contains("controlFlowTracer") == false)
       continue;
-    tracerFunctions.insert({func.getName(), &func});
-    errs() << "Function: " << func.getName()
-           << " added into tracer functions\n";
+    tracerFunctions.insert({fname, &func});
+    errs() << "Function: " << fname << " added into tracer functions\n";
   }
   return function_num;
 }

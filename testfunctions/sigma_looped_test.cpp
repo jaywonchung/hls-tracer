@@ -15,12 +15,12 @@ void run_test(int n, int ans, int *trace) {
   printf("\n");
   if (out != ans) {
     printf("Expected sigma_n(%d, trace) to be %d but got %d.\n", n, ans, out);
-    exit(1);
   }
 
   std::string filename = "trace-" + std::to_string(n) + ".json";
   json output = getResultInJson(trace, ARR_SZ, filename);
-//   std::cout << output.dump() << std::endl;
+
+  std::cout << output.dump() << std::endl;
 }
 
 int main() {

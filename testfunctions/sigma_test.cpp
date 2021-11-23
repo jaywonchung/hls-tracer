@@ -13,14 +13,14 @@ void run_test(int n, int ans, int *trace) {
   for (int i = 0; i < ARR_SZ; i++)
     printf("%c%d%c", " ["[i==0], trace[i], ",]"[i==ARR_SZ-1]);
   printf("\n");
-//   if (out != ans) {
-//     printf("Expected sigma_n(%d, trace) to be %d but got %d.\n", n, ans, out);
-//     exit(1);
-//   }
+  if (out != ans) {
+    printf("Expected sigma_n(%d, trace) to be %d but got %d.\n", n, ans, out);
+  }
 
   std::string filename = "trace-" + std::to_string(n) + ".json";
   json output = getResultInJson(trace, ARR_SZ, filename);
-//   std::cout << output.dump() << std::endl;
+
+  std::cout << output.dump() << std::endl;
 }
 
 int main() {

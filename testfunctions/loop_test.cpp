@@ -15,12 +15,12 @@ void run_test(int n, int ans, int *trace, float if_prob) {
   printf("\n");
   if (out != ans) {
     printf("Expected hot_loop(trace, %d, %.2f) to be %d but got %d.\n", n, if_prob, ans, out);
-    exit(1);
   }
 
   std::string filename = "trace-" + std::to_string(n) + "-" + std::to_string(if_prob) + ".json";
   json output = getResultInJson(trace, ARR_SZ, filename);
-//   std::cout << output.dump() << std::endl;
+
+  std::cout << output.dump() << std::endl;
 }
 
 int main() {
