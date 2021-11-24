@@ -1,18 +1,13 @@
 int top(int trace[258]) {
-  int acc = 0;
+  int acc[16] = {0,};
   for (int i = 0; i < 5; i++) {
-    int j = 0;
-    while (j < 10) {
-      acc += i * j;
-      j++;
+#pragma HLS pipeline off
+    for (int j = 0; j < 16; j++) {
+#pragma HLS pipeline off
+#pragma HLS unroll
+      acc[j] += i * j;
     }
   }
 
-  if (acc > 100) {
-    for (int i = 0; i < 20; i++) {
-      acc -= i;
-    }
-  }
-
-  return acc;
+  return acc[0] + acc[15];
 }
