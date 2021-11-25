@@ -26,6 +26,8 @@ import argparse
 import subprocess
 from dataclasses import dataclass
 
+import seaborn as sns
+
 def main(user_code: str, solution_dir: str, top_function: str) -> None:
     """The main routine for the analysis.
 
@@ -33,8 +35,8 @@ def main(user_code: str, solution_dir: str, top_function: str) -> None:
     """
     run_hot_loop_candidate_pass(user_code, top_function)
     hotloop = identify_hotloop(solution_dir)
-    explore_unroll_factor(hotloop)
-    # plot_results()
+    results = explore_unroll_factor(hotloop)
+    plot_results(results)
 
 @dataclass
 class Loop:
@@ -126,7 +128,21 @@ def identify_hotloop(solution_dir: str) -> Loop:
     print(f"Hottest loop: {hottest_loops[0]}")
     return hottest_loops[0]
 
-def explore_unroll_factor(loop: Loop) -> None:
+def explore_unroll_factor(loop: Loop) -> list[dict[str, int]]:
+    """Try a bunch of unroll factors.
+
+    Results are written in `unroll-result.json`.
+    Keys:
+        factor (int): The unroll factor used.
+        latency (int): The average number of cycles.
+        ff (int): The number of Flip-Flops used.
+        lut (int): The number of Look-Up Tables used.
+    """
+    return []
+
+def plot_results(results: list[dict[str, int]]) -> None:
+    """Plot the results of unroll factor exploration."""
+    sns.set_theme()
     pass
 
 def parse_args() -> argparse.Namespace:
