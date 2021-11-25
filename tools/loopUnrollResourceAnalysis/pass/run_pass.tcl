@@ -1,7 +1,7 @@
 # Check whether the pass shared object file is built
-set ::HOT_LOOP_CANDIDATE_PASS_SO hot-loop-candidate-pass.so
+set ::HOT_LOOP_CANDIDATE_PASS_SO pass/hot-loop-candidate-pass.so
 if { ![file exists $::HOT_LOOP_CANDIDATE_PASS_SO] } {
-  error "Must build hot-loop-candidate-pass.so before running this script. Run ./build.sh."
+  error "Must build hot-loop-candidate-pass.so before running this script"
 }
 
 set ::LLVM_CUSTOM_CMD {$LLVM_CUSTOM_OPT -load $::HOT_LOOP_CANDIDATE_PASS_SO -hotloopcandidate $LLVM_CUSTOM_INPUT -o $LLVM_CUSTOM_OUTPUT}
