@@ -53,8 +53,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("USER_CODE", help="Path to the user code.")
     parser.add_argument("SOLUTION_DIR", help="Path to the Vitis project solution directory.")
     parser.add_argument(
-        "--hotloop-pass-so",
-        default="HotLoopCandidate.so",
+        "--hot-loop-pass-so",
+        default="hot-loop-candidate-pass.so",
         help="Path to the HotLoopCandidate analysis pass shared object file."
     )
     parser.add_argument(
@@ -83,5 +83,5 @@ if __name__ == "__main__":
         args.USER_CODE,
         args.SOLUTION_DIR,
         args.custom_opt,
-        args.hotloop_pass_so
+        args.hot_loop_pass_so
     ))

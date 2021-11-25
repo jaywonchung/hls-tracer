@@ -15,5 +15,10 @@ unroll factor.
 ## Example Usage
 
 ```bash
+# Build the HotLoopCandidatePass shared object file
+source /mnt/storage/jcma/Xilinx/Vitis_HLS/2020.2/settings64.sh
+(cd pass; ./build.sh)
+
+# Run the driver script
 python main.py ../../testfunctions/nested.cpp ../../proj/solution
 ```

@@ -9,9 +9,9 @@
 
 using namespace llvm;
 
-struct LoopAnalysisPass : public FunctionPass {
+struct HotLoopAnalysisPass : public FunctionPass {
   static char ID;
-  LoopAnalysisPass() : FunctionPass(ID) {};
+  HotLoopAnalysisPass() : FunctionPass(ID) {};
   virtual bool runOnFunction(Function& func) override;
 
   void getAnalysisUsage(AnalysisUsage& au) const override {
@@ -23,12 +23,11 @@ struct LoopAnalysisPass : public FunctionPass {
   std::tuple<std::string, int, int> analyzeLoop(const Loop& loop);
 };
 
-bool LoopAnalysisPass::runOnFunction(Function& func) {
+bool HotLoopAnalysisPass::runOnFunction(Function& func) {
   errs() << "Entered function " << func.getName() << ".\n";
 
   std::error_code ec;
-  std::string filename("./loop-analysis-");
-  filename += func.getName();
+  std::string filename("./loop-analysis.txt");
   raw_fd_ostream fstream(filename, ec, sys::fs::OpenFlags::F_RW);
 
   LoopInfo& loopInfo = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
@@ -41,8 +40,13 @@ bool LoopAnalysisPass::runOnFunction(Function& func) {
   return false;
 }
 
-std::tuple<std::string, int, int> LoopAnalysisPass::analyzeLoop(const Loop& loop) {
-  auto name = getLoopName(&loop).getValue();
+std::tuple<std::string, int, int> HotLoopAnalysisPass::analyzeLoop(const Loop& loop) {
+  auto loopname = getLoopName(&loop);
+  if (!loopname.hasValue()) {
+    errs() << "Found a loop without a name:\n" << loop << '\n';
+    exit(1);
+  }
+  auto name = loopname.getValue();
   unsigned int line_min = INT_MAX, line_max = 0;
 
   for (auto bb : loop.getBlocks()) {
@@ -55,11 +59,12 @@ std::tuple<std::string, int, int> LoopAnalysisPass::analyzeLoop(const Loop& loop
     }
   }
 
+  /* return {name, line_min, line_max}; */
   return std::make_tuple(name, line_min, line_max);
 }
 
-char LoopAnalysisPass::ID = 0;
-static RegisterPass<LoopAnalysisPass> X("loopanalysis",
-                                        "Analyze loops that finds out their name and location.",
+char HotLoopAnalysisPass::ID = 0;
+static RegisterPass<HotLoopAnalysisPass> X("hotloopcandidate",
+                                        "Analyzes top-level loops and records their names and min/max line number.",
                                         false,
                                         false);
