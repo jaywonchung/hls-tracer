@@ -1,0 +1,26 @@
+# Open a dummy project
+open_project -reset proj
+
+# Add the user code
+add_files $::env(HOT_LOOP_USER_CODE)
+
+# Set the top-level function
+set_top $::env(HOT_LOOP_TOP_FUNCTION)
+
+# Open a dummy solution
+open_solution -reset -flow_target vitis solution
+
+# Set the target device
+set_part "virtex7"
+
+# Create a virtual clock for the current solution
+create_clock -period "300MHz"
+
+# TEMPLATE: Unroll the hottest loop with a specific unroll factor
+set_directive_unroll {top_function_name}/{loop_name} -factor {unroll_factor}
+
+# Run synthesis, in order to run the HotLoopCandidatePass
+csynth_design
+
+# Run cleanup
+exec rm -rf proj

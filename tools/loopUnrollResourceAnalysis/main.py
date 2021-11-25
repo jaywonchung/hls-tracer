@@ -27,9 +27,13 @@ import subprocess
 from dataclasses import dataclass
 
 def main(user_code: str, solution_dir: str, top_function: str) -> None:
+    """The main routine for the analysis.
+
+    See the function `parse_args` for explanations on the arguments.
+    """
     run_hot_loop_candidate_pass(user_code, top_function)
     hotloop = identify_hotloop(solution_dir)
-    # explore_unroll_factor(hotloop)
+    explore_unroll_factor(hotloop)
     # plot_results()
 
 @dataclass
@@ -50,14 +54,14 @@ class Loop:
 
     @staticmethod
     def from_line(line: str) -> Loop:
+        """Construct a Loop object from a line from loop-analysis.txt."""
         name, min_line, max_line = line.strip().split(" ")
         return Loop(name, (int(min_line), int(max_line)), 0)
 
     def appears_in(self, trace: list[int]) -> bool:
-        for line_number in trace:
-            if self.line_range[0] <= line_number <= self.line_range[1]:
-                return True
-        return False
+        """Check whether this loop is ever executed in the given trace."""
+        minl, maxl = self.line_range
+        return any(minl <= line_number <= maxl for line_number in trace)
 
     def compute_temperature(self) -> int:
         """The loop with the highest temperature is the hottest one."""
@@ -66,6 +70,11 @@ class Loop:
         return temperature
 
 def run_hot_loop_candidate_pass(user_code: str, top_function: str) -> None:
+    """Run the HotLoopCandidatePass on the given user source code.
+
+    This invokes csynth_design in Vitis HLS in order to run the pass.
+    The result of synthesis is discarded upon completion.
+    """
     print(f"Running HotLoopCandidatePass on '{user_code}' with top-level function '{top_function}'.")
     command = ["vitis_hls", "pass/run_pass.tcl"]
     env = {**os.environ, "HOT_LOOP_USER_CODE": user_code, "HOT_LOOP_TOP_FUNCTION": top_function}
@@ -73,6 +82,13 @@ def run_hot_loop_candidate_pass(user_code: str, top_function: str) -> None:
     subprocess.check_call(command, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 def identify_hotloop(solution_dir: str) -> Loop:
+    """Finds and returns the hottest loop.
+
+    1. Parse `loop-analysis.txt` and construct a list of `Loop` objects.
+    2. Find all trace JSON files inside the `solution_dir` with glob.
+    3. Increment the occurrence of a loop by one every time it appears in a trace file.
+    4. Find the loop with the highest temperature. Take draws into account.
+    """
     # Create Loop objects.
     loops: list[Loop] = []
     with open("loop-analysis.txt") as f:
@@ -109,6 +125,9 @@ def identify_hotloop(solution_dir: str) -> Loop:
         print(f"{len(hottest_loops)} loops have the same temperature. Just selecting the first one.")
     print(f"Hottest loop: {hottest_loops[0]}")
     return hottest_loops[0]
+
+def explore_unroll_factor(loop: Loop) -> None:
+    pass
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
