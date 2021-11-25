@@ -1,11 +1,14 @@
 # Open a dummy project
-open_project -reset proj
+open_project -reset {proj_name}
 
 # Add the user code
-add_files $::env(HOT_LOOP_USER_CODE)
+add_files {user_code}
+
+# Add the user testbench
+add_files -tb {user_tb}
 
 # Set the top-level function
-set_top $::env(HOT_LOOP_TOP_FUNCTION)
+set_top {top_function}
 
 # Open a dummy solution
 open_solution -reset -flow_target vitis solution
@@ -17,10 +20,12 @@ set_part "virtex7"
 create_clock -period "300MHz"
 
 # TEMPLATE: Unroll the hottest loop with a specific unroll factor
-set_directive_unroll {top_function_name}/{loop_name} -factor {unroll_factor}
+set_directive_unroll {top_function}/{loop_name} -factor {unroll_factor}
+set_directive_array_partition -type cyclic -factor {unroll_factor} {top_function} {array_name}
+# set_directive_array_partition -type complete {top_function} {array_name}
 
 # Run synthesis, in order to run the HotLoopCandidatePass
 csynth_design
 
-# Run cleanup
-exec rm -rf proj
+# Run co-simulation
+cosim_design

@@ -1,1 +1,5 @@
 loop-analysis.txt
+unroll-result.*
+proj*/
+vitis_hls*.log
+*.png
