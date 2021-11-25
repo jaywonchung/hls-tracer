@@ -6,4 +6,5 @@
 .ccls-cache
 
 proj/
+proj_notrace/
 vitis_hls.log

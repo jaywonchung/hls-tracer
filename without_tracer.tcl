@@ -31,7 +31,7 @@ if { ![file exists $::HLS_LLVM_PLUGIN_DIR/control-flow-trace-pass.so] } {
 # append ::LLVM_CUSTOM_CMD {$LLVM_CUSTOM_OPT -load $::HLS_LLVM_PLUGIN_DIR/control-flow-trace-pass.so -controlflowtrace $LLVM_CUSTOM_INPUT -o $LLVM_CUSTOM_OUTPUT}
 
 # Open a project and remove any existing data
-open_project -reset proj
+open_project -reset proj_notrace
 
 # Add kernel
 add_files $::env(HLS_TRACER_USER_CODE)
