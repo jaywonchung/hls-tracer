@@ -30,8 +30,8 @@ import threading
 from dataclasses import dataclass
 from pathlib import Path
 
-import pandas as pd
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
 
 HOT_LOOP_PASS_PATH = "pass/run_pass.tcl"
@@ -140,6 +140,9 @@ def identify_hotloop(solution_dir: str) -> Loop:
     trace_files: list[str] = glob.glob(
         VITIS_TRACE_FILE_PATHS.format(solution_dir=solution_dir)
     )
+    if not trace_files:
+        print("No trace files were found in the solution directory. Aborting.")
+        sys.exit(1)
     for trace_file in trace_files:
         full_trace: list[dict[str, int]] = json.load(open(trace_file))
         # We're only interested in line numbers.
@@ -256,7 +259,9 @@ def explore_unroll_factor(
     with open(UNROLL_RESULT_CSV_PATH, "w") as f:
         f.write("factor,latency,ff,lut\n")
         for result in results:
-            f.write(f"{result['factor']},{result['latency']},{result['ff']},{result['lut']}\n")
+            f.write(
+                f"{result['factor']},{result['latency']},{result['ff']},{result['lut']}\n"
+            )
 
 
 def plot_results() -> None:
