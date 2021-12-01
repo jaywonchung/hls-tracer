@@ -79,11 +79,11 @@ class Loop:
     line_range: tuple[int, int]
     occurrence: int
 
-    @staticmethod
-    def from_line(line: str) -> Loop:
+    @classmethod
+    def from_line(cls, line: str) -> Loop:
         """Construct a Loop object from a line from the hot loop analysis result."""
         name, min_line, max_line = line.strip().split(" ")
-        return Loop(name, (int(min_line), int(max_line)), 0)
+        return cls(name, (int(min_line), int(max_line)), 0)
 
     def appears_in(self, trace: list[int]) -> bool:
         """Check whether this loop is ever executed in the given trace."""
