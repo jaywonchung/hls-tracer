@@ -30,9 +30,7 @@ import threading
 from dataclasses import dataclass
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-import pandas as pd
-import seaborn as sns
+import plot
 
 HOT_LOOP_PASS_PATH = "pass/run_pass.tcl"
 HOT_LOOP_PASS_LOG_PATH = "pass/vitis_hls.log"
@@ -45,7 +43,7 @@ VITIS_SOLUTION_DATA_JSON_PATH = "proj{factor}/solution/solution_data.json"
 
 UNROLL_RESULT_JSON_PATH = "unroll-result.json"
 UNROLL_RESULT_CSV_PATH = "unroll-result.csv"
-UNROLL_RESULT_PLOT_PATH = "unroll-result.png"
+UNROLL_RESULT_PLOT_PATH = "unroll-result.pdf"
 
 NUM_WORKERS = 8
 UNROLL_RANGE = [1, 2, 4, 8, 16, 32]
@@ -59,7 +57,7 @@ def main(user_code: str, solution_dir: str, top_function: str) -> None:
     run_hot_loop_candidate_pass(user_code, top_function)
     hotloop = identify_hotloop(solution_dir)
     explore_unroll_factor(hotloop, user_code, top_function)
-    plot_results()
+    plot.plot_results(UNROLL_RESULT_CSV_PATH, UNROLL_RESULT_PLOT_PATH)
 
 
 @dataclass
@@ -261,25 +259,25 @@ def explore_unroll_factor(
             )
 
 
-def plot_results() -> None:
-    """Plot the results of unroll factor exploration."""
-    # Read results into a Pandas DataFrame from CSV.
-    df = pd.read_csv(UNROLL_RESULT_CSV_PATH)
+# def plot_results() -> None:
+#     """Plot the results of unroll factor exploration."""
+#     # Read results into a Pandas DataFrame from CSV.
+#     df = pd.read_csv(UNROLL_RESULT_CSV_PATH)
 
-    # Compute resource efficiency, for each ff and lut.
-    df["ff_efficiency"] = 1 / (df["ff"] * df["latency"])
-    df["lut_efficiency"] = 1 / (df["lut"] * df["latency"])
+#     # Compute resource efficiency, for each ff and lut.
+#     df["ff_efficiency"] = 1 / (df["ff"] * df["latency"])
+#     df["lut_efficiency"] = 1 / (df["lut"] * df["latency"])
 
-    # Plot with seaborn.
-    sns.set()
-    fig, axes = plt.subplots(1, 2, figsize=(10, 6))
-    axes[0].set_title("Flip-Flop efficiency")
-    axes[1].set_title("Look-Up Table efficiency")
-    sns.lineplot(ax=axes[0], x=df["factor"], y=df["ff_efficiency"])
-    sns.lineplot(ax=axes[1], x=df["factor"], y=df["lut_efficiency"])
-    fig.savefig(UNROLL_RESULT_PLOT_PATH)
+#     # Plot with seaborn.
+#     sns.set()
+#     fig, axes = plt.subplots(1, 2, figsize=(10, 6))
+#     axes[0].set_title("Flip-Flop efficiency")
+#     axes[1].set_title("Look-Up Table efficiency")
+#     sns.lineplot(ax=axes[0], x=df["factor"], y=df["ff_efficiency"])
+#     sns.lineplot(ax=axes[1], x=df["factor"], y=df["lut_efficiency"])
+#     fig.savefig(UNROLL_RESULT_PLOT_PATH)
 
-    print(f"Saved plot to {UNROLL_RESULT_PLOT_PATH}.")
+#     print(f"Saved plot to {UNROLL_RESULT_PLOT_PATH}.")
 
 
 def parse_args() -> argparse.Namespace:
