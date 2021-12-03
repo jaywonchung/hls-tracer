@@ -20,9 +20,11 @@ set_part "virtex7"
 create_clock -period "300MHz"
 
 # TEMPLATE: Unroll the hottest loop with a specific unroll factor
+set_directive_array_partition -type cyclic -factor {unroll_factor} -dim 1 {top_function} in
+set_directive_array_partition -type cyclic -factor {unroll_factor} -dim 1 {top_function} out
 set_directive_unroll {top_function}/{loop_name} -factor {unroll_factor}
-set_directive_array_partition -type cyclic -factor {unroll_factor} {top_function} {array_name}
-# set_directive_array_partition -type complete {top_function} {array_name}
+# set_directive_unroll {top_function}/{loop_name}
+
 
 # Run synthesis, in order to run the HotLoopCandidatePass
 csynth_design

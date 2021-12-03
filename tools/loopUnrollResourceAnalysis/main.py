@@ -47,18 +47,18 @@ UNROLL_RESULT_JSON_PATH = "unroll-result.json"
 UNROLL_RESULT_CSV_PATH = "unroll-result.csv"
 UNROLL_RESULT_PLOT_PATH = "unroll-result.png"
 
-NUM_WORKERS = 5
-UNROLL_RANGE = range(1, 9)
+NUM_WORKERS = 8
+UNROLL_RANGE = [1, 2, 4, 8, 16, 32]
 
 
-def main(user_code: str, solution_dir: str, top_function: str, array_name: str) -> None:
+def main(user_code: str, solution_dir: str, top_function: str) -> None:
     """The main routine for the analysis.
 
     See the function `parse_args` for explanations on the arguments.
     """
     run_hot_loop_candidate_pass(user_code, top_function)
     hotloop = identify_hotloop(solution_dir)
-    explore_unroll_factor(hotloop, user_code, top_function, array_name)
+    explore_unroll_factor(hotloop, user_code, top_function)
     plot_results()
 
 
@@ -172,8 +172,7 @@ def identify_hotloop(solution_dir: str) -> Loop:
 
 
 def explore_unroll_factor(
-    loop: Loop, user_code: str, top_function: str, array_name: str
-) -> None:
+    loop: Loop, user_code: str, top_function: str) -> None:
     """Try a bunch of unroll factors in parallel.
 
     Results are written in a JSON file.
@@ -205,7 +204,6 @@ def explore_unroll_factor(
                 top_function=top_function,
                 loop_name=loop.name,
                 unroll_factor=unroll_factor,
-                array_name=array_name,
             )
         )
         f.flush()
@@ -248,7 +246,6 @@ def explore_unroll_factor(
             user_code=user_code,
             top_function=top_function,
             unrolled_loop_name=loop.name,
-            partitioned_array_name=array_name,
         ),
         results=results,
     )
@@ -294,12 +291,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--top-function", default="top", help="The name of the top-level function."
     )
-    parser.add_argument(
-        "--array-name", default="acc", help="The name of the array to partition."
-    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    main(args.USER_CODE, args.SOLUTION_DIR, args.top_function, args.array_name)
+    main(args.USER_CODE, args.SOLUTION_DIR, args.top_function)

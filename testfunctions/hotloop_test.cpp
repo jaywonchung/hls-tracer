@@ -4,18 +4,22 @@
 
 #define ARR_SZ 258
 
-extern int top(int arr[ARR_SZ], int n);
+extern int top(int arr[ARR_SZ], int data_in[128], int data_out[128], int n);
 
 void run_test(int n, int ans, int *trace) {
   printf("Running hotloop(trace, %d)...\n", n);
-  int out = top(trace, n);
+  int in[128], out[128];
+  int result = top(trace, in, out, n);
+
+#ifndef NO_TRACE_SHOW
   printf("%s\n", "Function successfully returned. Content of trace array:");
   for (int i = 0; i < ARR_SZ; i++)
     printf("%c%d%c", " ["[i==0], trace[i], ",]"[i==ARR_SZ-1]);
   printf("\n");
-  if (out != ans) {
-    printf("Expected hotloop(trace, %d) to be %d but got %d.\n", n, ans, out);
+  if (result != ans) {
+    printf("Expected hotloop(trace, %d) to be %d but got %d.\n", n, ans, result);
   }
+#endif
 
   std::string filename = "trace-" + std::to_string(n) + ".json";
   json output = getResultInJson(trace, ARR_SZ, filename);
